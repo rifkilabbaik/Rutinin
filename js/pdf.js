@@ -1,7 +1,7 @@
 // Blok HTML → halaman A4 → PDF (html2canvas + jsPDF). Pratinjau = gambar halaman yang sama persis.
 import { loadScript } from './util.js';
 
-const W = 794, H = 1123, PT = 52, PB = 60;
+const W = 794, H = 1123, PT = 52, PB = 52;
 const AVAIL = H - PT - PB;
 
 async function waitImages(root) {
@@ -48,10 +48,6 @@ export async function buildPdf(blocks, { title = 'Dokumen', filename = 'Dokumen.
       const page = document.createElement('div');
       page.className = 'doc doc-page';
       pages[p].forEach(b => page.appendChild(b));
-      const foot = document.createElement('div');
-      foot.className = 'doc-foot';
-      foot.innerHTML = `<span>${title} · Rutinin</span><span>Halaman ${p + 1} dari ${pages.length}</span>`;
-      page.appendChild(foot);
       root.appendChild(page);
       const canvas = await window.html2canvas(page, { scale: 2, backgroundColor: '#ffffff', logging: false, useCORS: true, width: W, height: H, windowWidth: 1200 });
       const data = canvas.toDataURL('image/jpeg', 0.88);
@@ -61,7 +57,7 @@ export async function buildPdf(blocks, { title = 'Dokumen', filename = 'Dokumen.
       page.remove();
       onProgress?.((p + 1) / pages.length);
     }
-    pdf.setProperties({ title: filename.replace(/\.pdf$/, ''), creator: 'Rutinin' });
+    pdf.setProperties({ title: filename.replace(/\.pdf$/, '') });
     const blob = pdf.output('blob');
     return { blob, images, filename, pages: pages.length };
   } finally {

@@ -4,38 +4,21 @@ PWA untuk kegiatan rutin harian karyawan Sedjati Group: absen, foto absen bercap
 
 ## Fitur
 
-- **Absen**: membuka web absen sebagai jendela di atas aplikasi. Login cukup sekali.
-- **Foto Absen**:
-  - Kamera dengan cap waktu di kanan bawah: tanggal, jam, dan alamat dari GPS.
-  - Hasil foto **tidak mirror**. Ada tombol balik kamera.
-  - Alamat bisa diubah manual bila GPS tidak tersedia.
-  - Tombol **Simpan & buka Grup Grooming**.
+- **Absen**: web absen terbuka di dalam aplikasi. Kalau web absen menolak ditampilkan, ada tombol untuk membukanya di jendela.
+- **Foto Absen**: cap waktu (tanggal, jam, alamat GPS) di kanan bawah. Hasil kamera depan mirror seperti di layar, teks tetap terbaca normal. Setelah jepret: **Ulangi** atau **Kirim**.
 - **Agenda Kerja**:
-  - Cukup isi timeline (jam + nama kegiatan). Blok rutin dan tetap (Daily Task, Sholat, Istirahat) otomatis masuk.
-  - Rincian kegiatan terisi otomatis dari aturan dan riwayat.
-  - Open Item yang belum selesai diingatkan saat menyusun timeline.
-  - Wizard hanya menanyakan yang belum terjawab: Prioritas (🎯/▶️, maks 3), Referensi & PIC Open Item, Need Support, dan Need Decision. Jawaban tersimpan untuk dipilih lagi.
-  - Case ID otomatis `MCED-RR/2026-001`, berurutan dan tidak dobel.
-  - Pratinjau, lalu **Agenda Kerja - dd-mm-yyyy.pdf**.
+  - Cukup ketik jam dan judul. Rincian dan jenis kegiatan ditebak dari riwayat (✨).
+  - Tombol **Lanjutkan dari kemarin** memasukkan pekerjaan dan Open Item yang belum selesai.
+  - **Cek sebelum PDF** dalam 1 halaman: Kata baru (singkatan disimpan ke Kamus), Prioritas, Open Item, Need Support, Need Decision, dan Pekerjaan pendukung. Semua diisi dari riwayat; yang ditanyakan hanya yang belum diketahui.
 - **Laporan Kerja**:
-  - Langsung dari agenda: tandai Selesai, Progress, atau Belum. Foto opsional per kegiatan.
-  - Kendala dan kelanjutan Open Item ditanyakan (Lanjut, On Hold, Delegasi, Batal).
-  - Executive Summary dan Refleksi disusun otomatis.
-  - Isi PDF: KPI/Progress, Problem Log, Need Support/Decision, dan Lampiran Dokumentasi.
+  - Tap ✓ / ½ / ✕ per kegiatan, atau **Semua selesai**.
+  - Realisasi dan kendala terisi otomatis (✨). Tap kegiatan untuk mengubah atau menambah foto.
+  - **Cek Laporan** dalam 1 halaman: Ringkasan, Open Item, Need Support, Need Decision, dan Refleksi, semuanya otomatis dan dicek dulu sebelum dikirim.
+- **Kirim**: menu Bagikan Android ke aplikasi Telegram, PDF dan teks keterangan sekaligus. Teks juga tersalin sebagai cadangan.
 - **Day Off / Cuti / Sakit / Izin**: Agenda dan Laporan hanya berisi header dan keterangan.
-- **Kirim ke Telegram** (manual, tanpa bot):
-  1. Tekan **Kirim**. PDF tersimpan dan teks header tersalin.
-  2. Jendela Telegram Web terbuka di grup atau topik tujuan.
-  3. Tekan 📎, pilih **File**, pilih PDF-nya, tempel teks, lalu kirim.
-- **Spreadsheet**: data tersimpan di HP dulu (tetap jalan tanpa sinyal), lalu tersinkron ke Google Spreadsheet lewat Apps Script.
-- **Rekap**:
-  - Rentang tanggal bebas: hari ini, minggu ini, bulan ini, atau custom.
-  - Unduh CSV Pekerjaan dan Open Item.
-- **AI lokal (opsional)**:
-  - Qwen2.5 1.5B lewat WebLLM + WebGPU, berjalan langsung di HP tanpa API.
-  - Unduh sekali ±1 GB.
-  - Dipakai untuk tombol ✨ *Bantu tulis*. Tanpa AI, tombol *Isi otomatis* tetap instan.
-- Tema Oranye/Peach/Mint/Lavender dan Terang/Gelap/Otomatis. Bisa dipasang ke layar utama dan tetap bisa dibuka offline.
+- **Spreadsheet & Drive**: data tersimpan di HP dulu, lalu tersinkron. Foto laporan dan arsip PDF disimpan ke folder Drive **Rutinin**.
+- **AI lokal (opsional)**: Qwen2.5 1.5B di prosesor HP (wllama, tanpa GPU dan tanpa API), unduh sekali ±1,1 GB. Menulis ringkasan, refleksi, rincian, dan menebak singkatan di belakang layar. Kalau HP kehabisan memori saat memuat, AI otomatis dimatikan.
+- **Rekap** per rentang tanggal + unduh CSV.
 
 ## Pasang di HP (Android)
 
@@ -50,6 +33,7 @@ PWA untuk kegiatan rutin harian karyawan Sedjati Group: absen, foto absen bercap
 3. Isi dua baris paling atas:
    - `SHEET_ID`: bagian di antara `/d/` dan `/edit` pada link spreadsheet.
    - `PIN`: angka bebas, harus sama dengan yang diisi di aplikasi.
+   - Script kini juga menyimpan foto & PDF ke Google Drive, jadi saat deploy akan diminta izin akses Drive.
 4. Simpan, lalu **Deploy**:
    - Jika sudah pernah deploy: **Deploy → Kelola deployment → ✎ Edit → Versi: Versi baru → Deploy**. URL tetap sama.
    - Jika belum: **Deploy → Deployment baru → Aplikasi web**, *Jalankan sebagai: Saya*, *Siapa yang memiliki akses: Siapa saja*.
@@ -67,6 +51,9 @@ Sheet yang dibuat otomatis:
 | Laporan | Satu baris per kegiatan |
 | Open Item | Daftar Open Item |
 | Keputusan | Daftar Need Decision |
+| Kamus | Kata/singkatan baru dan artinya |
+| Foto | Foto laporan (gambar kecil + link Drive) |
+| Arsip PDF | Link PDF Agenda & Laporan di Drive |
 | `_Data` | Disembunyikan; cadangan untuk fitur **Pulihkan** |
 
 Filter kolom Tanggal untuk menarik data per rentang tanggal.
@@ -76,15 +63,16 @@ Filter kolom Tanggal untuk menarik data per rentang tanggal.
 ```
 index.html, manifest.webmanifest, sw.js   PWA
 css/app.css                                desain keluarga -in
-js/app.js        navigasi, Beranda, Portal, Day Off, setup link
+js/app.js        navigasi, Beranda, Absen, Day Off, setup link
 js/camera.js     kamera timestamp
-js/agenda.js     Agenda Kerja + wizard
-js/laporan.js    Laporan Kerja + wizard
+js/agenda.js     Agenda Kerja + Cek sebelum PDF
+js/laporan.js    Laporan Kerja + Cek Laporan
 js/docs.js       format dokumen sesuai standar
 js/pdf.js        HTML → PDF A4 (html2canvas + jsPDF)
 js/smart.js      penyusun otomatis (aturan + memori)
-js/ai.js         AI lokal (WebLLM)
+js/ai.js         AI lokal lewat CPU (wllama)
 js/sync.js       sinkron Apps Script
-js/rekap.js, js/settings.js, js/store.js, js/db.js, js/util.js, js/wizard.js, js/send.js
+js/rekap.js, js/settings.js, js/store.js, js/db.js, js/util.js, js/send.js
+vendor/wllama/   llama.cpp WebAssembly (lisensi MIT)
 apps-script/Code.gs
 ```

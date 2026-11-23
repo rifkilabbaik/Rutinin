@@ -1,93 +1,83 @@
-// AI lokal (opsional): Qwen2.5 1.5B lewat WebLLM + WebGPU. Diunduh sekali, lalu jalan di HP tanpa internet.
-import { $, toast, sheet } from './util.js';
-import { getSettings } from './store.js';
+// AI lokal lewat CPU (wllama / llama.cpp WebAssembly): Qwen2.5 1.5B. Tidak memakai GPU, jadi tidak membuat browser crash.
+import { getSettings, saveSettings, getKamus } from './store.js';
+import { toast } from './util.js';
 
-const LIB = 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.87/+esm';
-const MODELS = { f16: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', f32: 'Qwen2.5-1.5B-Instruct-q4f32_1-MLC' };
-let lib, engine, loading;
+const MODEL = { repo: 'Qwen/Qwen2.5-1.5B-Instruct-GGUF', file: 'qwen2.5-1.5b-instruct-q4_k_m.gguf' };
+const GUARD = 'rutinin.ai.loading';
+let W, ready, queue = Promise.resolve();
 
-export async function support() {
-  if (!('gpu' in navigator)) return { ok: false, reason: 'Browser belum mendukung WebGPU. Perbarui Chrome ke versi terbaru.' };
-  try {
-    const a = await navigator.gpu.requestAdapter();
-    if (!a) return { ok: false, reason: 'GPU HP tidak bisa dipakai oleh browser.' };
-    return { ok: true, f16: a.features.has('shader-f16') };
-  } catch (e) { return { ok: false, reason: e.message }; }
+const errMsg = e => (e && (e.message || e.reason || e.toString?.())) || 'tidak diketahui';
+
+async function lib() {
+  const mod = await import(new URL('../vendor/wllama/index.js', import.meta.url).href);
+  return mod.Wllama;
 }
-const getLib = async () => lib ||= await import(LIB);
-export async function modelId() { const s = await support(); return s.f16 ? MODELS.f16 : MODELS.f32; }
-export async function isCached() { try { return await (await getLib()).hasModelInCache(await modelId()); } catch { return false; } }
-export const isLoaded = () => !!engine;
+async function instance() {
+  if (!W) { const Wllama = await lib(); W = new Wllama({ default: new URL('../vendor/wllama/wllama.wasm', import.meta.url).href }, { allowOffline: true }); }
+  return W;
+}
+
+export async function isCached() {
+  try { const w = await instance(); return (await w.cacheManager.list()).some(e => e.name.includes(MODEL.file)); } catch { return false; }
+}
+export const isLoaded = () => !!W?.isModelLoaded?.();
+
+// Pengaman: kalau aplikasi tertutup paksa saat memuat model, AI dimatikan otomatis
+export async function checkCrashGuard() {
+  if (localStorage.getItem(GUARD)) {
+    localStorage.removeItem(GUARD);
+    await saveSettings({ ai: { enabled: false, crashed: true } });
+    toast('AI dimatikan: HP kehabisan memori saat memuat AI', 5000);
+  }
+}
 
 export function load(onProgress) {
-  if (engine) return Promise.resolve(engine);
-  return loading ||= (async () => {
-    const l = await getLib();
-    const id = await modelId();
-    const worker = new Worker(new URL('./llm-worker.js', import.meta.url), { type: 'module' });
-    engine = await l.CreateWebWorkerMLCEngine(worker, id, { initProgressCallback: r => onProgress?.(r) });
-    return engine;
-  })().catch(e => { loading = null; throw e; });
+  return ready ||= (async () => {
+    const w = await instance();
+    localStorage.setItem(GUARD, '1');
+    try {
+      await w.loadModelFromHF(MODEL, {
+        n_ctx: 2048, n_batch: 256, n_gpu_layers: 0, useCache: true,
+        progressCallback: ({ loaded, total }) => onProgress?.(total ? loaded / total : 0),
+      });
+    } finally { localStorage.removeItem(GUARD); }
+    return w;
+  })().catch(e => { ready = null; throw new Error(errMsg(e)); });
 }
 export async function removeModel() {
-  const l = await getLib();
-  try { await engine?.unload?.(); } catch {}
-  engine = null; loading = null;
-  await l.deleteModelAllInfoInCache(await modelId());
+  const w = await instance();
+  try { await w.exit(); } catch {}
+  W = null; ready = null;
+  try { await (await instance()).cacheManager.deleteMany(e => e.name.includes(MODEL.file)); } catch {}
 }
 
-const SYS = 'Kamu asisten penulis agenda dan laporan kerja harian karyawan Sedjati Group. Tulis dalam Bahasa Indonesia baku yang singkat, jelas, dan profesional. Jangan mengarang fakta yang tidak ada di data. Jawab hanya dengan poin-poin, satu poin per baris, tanpa kalimat pembuka atau penutup.';
-async function chat(user, max = 320, sys = SYS) {
-  const r = await engine.chat.completions.create({ messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], temperature: 0.3, max_tokens: max });
-  return (r.choices[0].message.content || '').trim();
-}
-const toLines = t => t.split('\n').map(x => x.replace(/^\s*([-•*]|\d+[.)])\s*/, '').replace(/\*\*/g, '').trim()).filter(Boolean);
+const toLines = t => String(t || '').split('\n').map(x => x.replace(/^\s*([-•*]|\d+[.)])\s*/, '').replace(/\*\*/g, '').trim()).filter(Boolean);
 const ST = { done: 'selesai', progress: 'dalam progress', not: 'belum tercapai' };
+
+async function chat(prompt, max) {
+  const kamus = Object.entries(await getKamus()).filter(([, v]) => v.arti).map(([k, v]) => `${k} = ${v.arti}`).slice(0, 30).join('; ');
+  const sys = 'Kamu asisten penulis agenda dan laporan kerja harian karyawan Sedjati Group. Tulis dalam Bahasa Indonesia baku, singkat, jelas, profesional. Jangan mengarang angka atau fakta. Jawab hanya poin-poin, satu poin per baris, tanpa pembuka atau penutup.' + (kamus ? ` Istilah: ${kamus}.` : '');
+  const r = await W.createChatCompletion({ messages: [{ role: 'system', content: sys }, { role: 'user', content: prompt }], max_tokens: max, temperature: 0.3, top_p: 0.9 });
+  return r.choices?.[0]?.message?.content || '';
+}
 const describe = m => [
   ...m.kpi.map(k => `- ${k.title}: ${ST[k.status]}${k.realisasi ? `; realisasi: ${k.realisasi}` : ''}${k.kendala ? `; kendala: ${k.kendala}` : ''}`),
-  ...m.problem.map(p => `- Open Item ${p.caseId} (${p.desc}): ${p.progress}`),
   ...m.decisions.map(d => `- Keputusan ${d.status === 'pending' ? 'menunggu' : 'sudah diambil'}: ${d.what}`),
 ].join('\n');
 
-const api = {
-  async expandDetails(title, existing = []) {
-    return toLines(await chat(`Kegiatan di agenda kerja: "${title}".${existing.length ? `\nRincian saat ini:\n${existing.join('\n')}` : ''}\nTulis 3 sampai 5 rincian langkah kerja untuk kegiatan ini. Setiap poin diawali kata kerja.`)).slice(0, 5);
-  },
-  async summary(m) {
-    return toLines(await chat(`Data laporan kerja hari ini:\n${describe(m)}\n\nTulis Executive Summary maksimal 5 poin.`)).slice(0, 5);
-  },
-  async refleksi(m) {
-    const out = toLines(await chat(`Data laporan kerja hari ini:\n${describe(m)}\n\nJawab 5 pertanyaan refleksi ini, tepat 5 baris sesuai urutan, masing-masing satu kalimat:\n1. Apa pencapaian terbaik?\n2. Apa kendala terbesar?\n3. Apa pembelajaran yang diperoleh?\n4. Apa prioritas utama berikutnya?\n5. Apa usulan perbaikan bagi unit, sistem, atau perusahaan?`, 420));
-    return out.length >= 5 ? out.slice(0, 5) : null;
-  },
+const TASKS = {
+  details: ({ title, examples }) => chat(`Kegiatan: "${title}".${examples?.length ? `\nContoh rincian kegiatan serupa sebelumnya:\n${examples.join('\n')}` : ''}\nTulis 3 sampai 4 rincian langkah kerja, setiap poin diawali kata kerja.`, 120).then(t => toLines(t).slice(0, 4)),
+  summary: m => chat(`Data laporan hari ini:\n${describe(m)}\n\nTulis Executive Summary maksimal 5 poin.`, 160).then(t => toLines(t).slice(0, 5)),
+  refleksi: m => chat(`Data laporan hari ini:\n${describe(m)}\n\nJawab tepat 5 baris sesuai urutan, masing-masing satu kalimat:\n1. Pencapaian terbaik?\n2. Kendala terbesar?\n3. Pembelajaran?\n4. Prioritas berikutnya?\n5. Usulan perbaikan bagi unit/sistem/perusahaan?`, 220).then(t => { const l = toLines(t); return l.length >= 5 ? l.slice(0, 5) : null; }),
+  meaning: ({ word, context }) => chat(`Dalam kalimat "${context}", singkatan "${word}" kemungkinan besar kepanjangannya apa? Jawab hanya kepanjangannya saja.`, 24).then(t => toLines(t)[0]?.replace(/[."]+$/g, '') || ''),
 };
 
-const busy = (title, extra = '') => sheet({ title, dismissible: false, html: `<div class="loading"><div class="dots"><i></i><i></i><i></i></div><span id="aip">${extra}</span><div class="progress" style="width:100%"><i id="aib"></i></div></div>` });
-
-// Pembungkus: cek aktif → muat model (dengan progres) → jalankan
-export async function withAI(fn) {
+// Jalankan tugas AI di belakang layar (antre satu per satu). Hasil null bila AI tidak aktif/gagal.
+export async function run(task, input) {
   const s = await getSettings();
-  if (!s.ai?.enabled) {
-    sheet({
-      title: 'AI lokal belum aktif',
-      html: '<p class="muted">AI berjalan langsung di HP: tanpa API dan tanpa internet setelah diunduh. Model diunduh sekali (±1 GB) di Pengaturan → AI lokal.</p><p class="muted">Tanpa AI pun, tombol <b>Isi otomatis</b> tetap menyusun isi secara instan.</p>',
-      actions: [{ label: 'Nanti', onClick: x => x.close() }, { label: 'Buka Pengaturan', primary: true, onClick: x => { x.close(); location.hash = '#/pengaturan'; } }],
-    });
-    return null;
-  }
-  let sh;
-  try {
-    if (!engine) {
-      sh = busy('Menyiapkan AI lokal', 'Memuat model…');
-      await load(r => { const p = $('#aip'); if (p) p.textContent = (r.text || '').slice(0, 90); const b = $('#aib'); if (b) b.style.width = Math.round((r.progress || 0) * 100) + '%'; });
-      sh.close();
-    }
-    sh = busy('AI sedang menulis…');
-    const out = await fn(api);
-    sh.close();
-    if (!out?.length) toast('AI tidak memberi jawaban, coba lagi');
-    return out;
-  } catch (e) {
-    sh?.close(); console.error(e); toast('AI gagal: ' + e.message, 5000); return null;
-  }
+  if (!s.ai?.enabled) return null;
+  const job = queue.then(async () => { await load(); return TASKS[task](input); });
+  queue = job.catch(() => {});
+  try { return await job; } catch (e) { console.warn('AI', e); toast('AI gagal: ' + errMsg(e), 4000); return null; }
 }
+export const enabled = async () => !!(await getSettings()).ai?.enabled;

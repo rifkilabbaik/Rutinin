@@ -33,17 +33,13 @@ export async function render(v) {
 
     <details class="card"><summary>${icon('flag')}<h2>Case ID Open Item</h2><span class="chev">${icon('down')}</span></summary>
       ${field('casePrefix', 'Kode unit', 'MCED-RR')}${field('caseStart', 'Nomor urut mulai', '1', 'number')}
-      <p class="hint">Format: ${esc(s.casePrefix)}/${new Date().getFullYear()}-001. Nomor berikutnya dihitung otomatis dan tidak dobel.</p>
     </details>
 
-    <details class="card"><summary>${icon('send')}<h2>Link Portal</h2><span class="chev">${icon('down')}</span></summary>
-      ${link('absen', 'Absen kehadiran', 'https://…/attendances')}${link('grooming', 'Grup Grooming (foto absen)', 'https://web.telegram.org/k/#-…')}
-      ${link('rencana', 'Topik Rencana Kerja', 'https://web.telegram.org/k/#-…')}${link('laporan', 'Topik Laporan Kerja', 'https://web.telegram.org/k/#-…')}
-      <p class="hint">Tip: di Telegram Web buka topiknya, lalu salin alamat dari address bar supaya jendela langsung masuk ke topik.</p>
+    <details class="card"><summary>${icon('absen')}<h2>Absen</h2><span class="chev">${icon('down')}</span></summary>
+      ${link('absen', 'Link absen kehadiran', 'https://…/attendances')}
     </details>
 
     <details class="card"><summary>${icon('clock')}<h2>Blok rutin & tetap</h2><span class="chev">${icon('down')}</span></summary>
-      <p class="hint">Otomatis masuk ke setiap agenda baru (mis. Daily Task, Sholat Dzuhur, Istirahat).</p>
       <div class="tl" id="rt"></div>
       <button class="btn btn-soft" id="rtAdd">${icon('plus')}Tambah blok</button>
     </details>
@@ -53,7 +49,6 @@ export async function render(v) {
       ${field('pin', 'PIN (sama dengan di Apps Script)', 'mis. 4821')}
       ${field('sheetUrl', 'Link Spreadsheet (untuk tombol buka)', 'https://docs.google.com/spreadsheets/…', 'url')}
       <div class="btns"><button class="btn btn-soft btn-sm" id="ping">${icon('check')}Tes koneksi</button><button class="btn btn-soft btn-sm" id="push">${icon('upload')}Sinkron semua</button><button class="btn btn-soft btn-sm" id="pull">${icon('download')}Pulihkan</button></div>
-      <p class="hint">Data selalu tersimpan di HP dulu, lalu dikirim ke Spreadsheet saat online.</p>
     </details>
 
     <details class="card" id="aiCard"><summary>${icon('sparkle')}<h2>AI lokal</h2><span class="chev">${icon('down')}</span></summary>
@@ -63,7 +58,6 @@ export async function render(v) {
     <details class="card"><summary>${icon('download')}<h2>Data</h2><span class="chev">${icon('down')}</span></summary>
       <div class="btns"><button class="btn btn-soft btn-sm" id="bak">${icon('download')}Cadangkan (JSON)</button>
         <label class="btn btn-soft btn-sm" style="cursor:pointer">${icon('upload')}Pulihkan file<input type="file" accept="application/json" id="imp" hidden></label></div>
-      <p class="hint">Rutinin · data tersimpan di HP ini. Foto lampiran tidak ikut dicadangkan.</p>
     </details>`;
 
   // Tampilan
@@ -116,33 +110,31 @@ export async function render(v) {
     try { const n = await sync.restore(); toast(`${n} hari dipulihkan ✓`); } catch (e) { toast('Gagal: ' + e.message, 5000); }
   };
 
-  // AI lokal
+  // AI lokal (CPU)
   const ai = await import('./ai.js');
   async function drawAI() {
     const box = $('#ai', v);
-    const sp = await ai.support();
-    if (!sp.ok) { box.innerHTML = `<p class="muted">${icon('alert')} ${esc(sp.reason)}</p><p class="hint">Tanpa AI, tombol <b>Isi otomatis</b> tetap menyusun isi secara instan.</p>`; return; }
     const cached = await ai.isCached();
     const on = s.ai?.enabled;
-    box.innerHTML = `<p class="muted">Model <b>Qwen2.5 1.5B</b> berjalan langsung di HP (WebGPU${sp.f16 ? ', f16' : ''}). Tanpa API, tanpa internet setelah diunduh. Dipakai untuk tombol ✨ <b>Bantu tulis</b>: rincian kegiatan, Executive Summary, dan Refleksi.</p>
-      <div class="row" style="padding:0"><span class="av ${on && cached ? 'ok' : ''}">${icon('sparkle')}</span><span class="row-main"><span class="row-t">${on && cached ? 'Aktif' : cached ? 'Terunduh, nonaktif' : 'Belum diunduh'}</span><span class="row-s">${cached ? 'Model tersimpan di HP' : 'Unduhan ±1 GB, sebaiknya pakai Wi-Fi'}</span></span></div>
-      <div class="progress" id="aibar" hidden><i></i></div><p class="hint" id="aitext"></p>
-      <div class="btns">${!on || !cached ? `<button class="btn btn-primary btn-sm" id="aiOn">${icon('download')}${cached ? 'Aktifkan' : 'Unduh & aktifkan'}</button>` : `<button class="btn btn-soft btn-sm" id="aiOff">Nonaktifkan</button>`}
+    box.innerHTML = `<p class="muted">Qwen2.5 1.5B berjalan di prosesor HP (tanpa GPU, tanpa API). Menulis rincian, ringkasan, refleksi & menebak singkatan di belakang layar.${s.ai?.crashed ? '<br><b>Sempat dimatikan karena HP kehabisan memori.</b>' : ''}</p>
+      <div class="row" style="padding:0"><span class="av ${on ? 'ok' : ''}">${icon('sparkle')}</span><span class="row-main"><span class="row-t">${on ? 'Aktif' : 'Nonaktif'}</span><span class="row-s">${cached ? 'Model tersimpan di HP' : 'Unduh ±1,1 GB (pakai Wi-Fi)'}</span></span></div>
+      <div class="progress" id="aibar" hidden><i></i></div>
+      <div class="btns">${on ? `<button class="btn btn-soft btn-sm" id="aiOff">Nonaktifkan</button>` : `<button class="btn btn-primary btn-sm" id="aiOn">${icon('download')}${cached ? 'Aktifkan' : 'Unduh & aktifkan'}</button>`}
         ${cached ? `<button class="btn btn-danger btn-sm" id="aiDel">${icon('trash')}Hapus model</button>` : ''}</div>`;
     $('#aiOn', box) && ($('#aiOn', box).onclick = async e => {
       e.target.disabled = true; $('#aibar', box).hidden = false;
       try {
-        await ai.load(r => { $('#aibar i', box).style.width = Math.round((r.progress || 0) * 100) + '%'; $('#aitext', box).textContent = (r.text || '').slice(0, 100); });
-        s = await saveSettings({ ai: { enabled: true } }); toast('AI lokal aktif ✓'); drawAI();
-      } catch (err) { toast('Gagal memuat AI: ' + err.message, 6000); e.target.disabled = false; }
+        await ai.load(p => { $('#aibar i', box).style.width = Math.round(p * 100) + '%'; });
+        s = await saveSettings({ ai: { enabled: true } }); toast('AI aktif ✓'); drawAI();
+      } catch (err) { toast('Gagal memuat AI: ' + (err?.message || err), 6000); e.target.disabled = false; $('#aibar', box).hidden = true; }
     });
     $('#aiOff', box) && ($('#aiOff', box).onclick = async () => { s = await saveSettings({ ai: { enabled: false } }); drawAI(); });
     $('#aiDel', box) && ($('#aiDel', box).onclick = async () => {
       if (!(await confirmBox('Hapus model AI dari HP?', { ok: 'Hapus' }))) return;
-      await ai.removeModel(); s = await saveSettings({ ai: { enabled: false } }); toast('Model dihapus'); drawAI();
+      await ai.removeModel(); s = await saveSettings({ ai: { enabled: false } }); drawAI();
     });
   }
-  $('#aiCard', v).addEventListener('toggle', function once() { if (this.open) { drawAI().catch(e => $('#ai', v).textContent = e.message); this.removeEventListener('toggle', once); } });
+  $('#aiCard', v).addEventListener('toggle', function once() { if (this.open) { drawAI().catch(e => $('#ai', v).textContent = e?.message || e); this.removeEventListener('toggle', once); } });
 
   // Data
   $('#bak', v).onclick = async () => {

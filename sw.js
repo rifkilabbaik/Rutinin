@@ -1,9 +1,9 @@
 // Service worker Rutinin — aplikasi tetap bisa dibuka tanpa internet
-const VERSION = 'rutinin-v1';
+const VERSION = 'rutinin-v2';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/util.js', 'js/db.js', 'js/store.js', 'js/sync.js', 'js/camera.js', 'js/agenda.js', 'js/laporan.js',
-  'js/docs.js', 'js/pdf.js', 'js/send.js', 'js/smart.js', 'js/ai.js', 'js/llm-worker.js', 'js/wizard.js', 'js/rekap.js', 'js/settings.js',
+  'js/docs.js', 'js/pdf.js', 'js/send.js', 'js/smart.js', 'js/ai.js', 'js/rekap.js', 'js/settings.js',
   'vendor/jspdf.umd.min.js', 'vendor/html2canvas.min.js',
   'icons/logo.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png',
 ];
@@ -20,8 +20,8 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // Font Google & pustaka AI: simpan setelah dipakai sekali
-  if (['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'].includes(url.host)) {
+  // Font Google: simpan setelah dipakai sekali
+  if (['fonts.googleapis.com', 'fonts.gstatic.com'].includes(url.host)) {
     e.respondWith(caches.open('rutinin-fonts').then(async c => {
       const hit = await c.match(req);
       if (hit) return hit;

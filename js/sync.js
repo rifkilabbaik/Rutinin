@@ -1,6 +1,6 @@
 // Sinkron ke Google Spreadsheet lewat Apps Script (data tetap tersimpan di HP dulu)
 import { db } from './db.js';
-import { getSettings, allDays, allOpenItems, allDecisions } from './store.js';
+import { getSettings, allDays, allOpenItems, allDecisions, getKamus, allUploads, saveUpload, getPhoto } from './store.js';
 
 let running = null;
 
@@ -26,12 +26,13 @@ async function run(force) {
   const s = await getSettings();
   if (!s.scriptUrl) return { ok: false, error: 'URL Apps Script belum diatur' };
   if (!navigator.onLine) return { ok: false, error: 'Sedang offline' };
+  await flushUploads(s);
   const dirty = (await db.get('kv', 'dirty')) || { dates: [], all: false };
   if (!force && !dirty.dates.length && !dirty.all) return { ok: true, skipped: true };
   const days = (await allDays()).filter(d => force || dirty.dates.includes(d.date));
   const sent = Object.fromEntries(days.map(d => [d.date, d.updatedAt]));
   try {
-    await call(s, { action: 'save', profile: { nama: s.nama, jabatan: s.jabatan, unit: s.unit }, days, openItems: await allOpenItems(), decisions: await allDecisions() });
+    await call(s, { action: 'save', profile: { nama: s.nama, jabatan: s.jabatan, unit: s.unit }, days, openItems: await allOpenItems(), decisions: await allDecisions(), kamus: await getKamus() });
   } catch (e) { return { ok: false, error: e.message }; }
   // hapus penanda hanya untuk data yang tidak berubah selama proses kirim
   const now = (await db.get('kv', 'dirty')) || { dates: [], all: false };
@@ -62,6 +63,7 @@ export async function restore() {
     const local = await db.get('openItems', o.caseId);
     if (!local || (o.updatedAt || 0) > (local.updatedAt || 0)) await db.put('openItems', o);
   }
+  if (j.kamus) await db.put('kv', { ...j.kamus, ...((await db.get('kv', 'kamus')) || {}) }, 'kamus');
   if (j.decisions?.length) {
     const cur = (await db.get('kv', 'decisions')) || [];
     const map = new Map(cur.map(d => [d.id, d]));
@@ -69,4 +71,24 @@ export async function restore() {
     await db.put('kv', [...map.values()], 'decisions');
   }
   return n;
+}
+
+// ---------- Unggah foto laporan & arsip PDF ke Google Drive ----------
+const b64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(blob); });
+async function thumb(blob) {
+  const bmp = await createImageBitmap(blob); const k = 240 / Math.max(bmp.width, bmp.height);
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.7).split(',')[1];
+}
+async function flushUploads(s) {
+  for (const u of (await allUploads()).filter(x => x.status !== 'done').sort((a, b) => a.at - b.at)) {
+    try {
+      let blob = u.blob, mime = 'application/pdf', extra = {};
+      if (u.kind === 'photo') { const p = await getPhoto(u.photoId); if (!p) { u.status = 'done'; await saveUpload(u); continue; } blob = p.blob; mime = 'image/jpeg'; extra = { title: u.title, thumb: await thumb(blob) }; }
+      const j = await call(s, { action: 'upload', kind: u.kind, date: u.date, jenis: u.jenis, name: u.name, mime, data: await b64(blob), ...extra });
+      Object.assign(u, { status: 'done', url: j.url, blob: null });
+      await saveUpload(u);
+    } catch (e) { console.warn('upload', e); break; }
+  }
 }

@@ -1,5 +1,6 @@
 // Kamera timestamp: jam & tanggal + alamat di kanan bawah, hasil TIDAK mirror
-import { $, esc, icon, toast, sheet, download, openPortal, iso } from './util.js';
+import { $, esc, icon, toast, sheet, iso } from './util.js';
+import { shareFile } from './send.js';
 import { getSettings } from './store.js';
 import { db } from './db.js';
 
@@ -68,8 +69,7 @@ export async function render(v) {
         <div class="cam-frame" id="frame"><video id="vid" playsinline muted autoplay></video><canvas id="ov"></canvas></div>
         <div class="cam-top">
           <a class="cam-btn" href="#/beranda" aria-label="Tutup">${icon('x')}</a>
-          <span class="cam-loc" id="loc">${icon('pin')} Mencari lokasi…</span>
-          <button class="cam-btn" id="editAddr" aria-label="Ubah alamat">${icon('edit')}</button>
+          <button class="cam-loc" id="loc">${icon('pin')} Mencari lokasi…</button>
         </div>
       </div>
       <div class="cam-bar">
@@ -133,7 +133,10 @@ export async function render(v) {
     const d = new Date();
     const c = document.createElement('canvas'); c.width = vid.videoWidth; c.height = vid.videoHeight;
     const ctx = c.getContext('2d');
-    ctx.drawImage(vid, 0, 0, c.width, c.height); // tanpa flip → hasil tidak mirror
+    // kamera depan: hasil mirror seperti di layar; teks cap waktu tetap terbaca normal
+    if (facing === 'user') { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
+    ctx.drawImage(vid, 0, 0, c.width, c.height);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     drawStamp(ctx, c.width, c.height, lines(d));
     const fl = document.createElement('div'); fl.className = 'flash'; document.body.appendChild(fl); setTimeout(() => fl.remove(), 400);
     lastBlob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
@@ -149,27 +152,21 @@ export async function render(v) {
     r.className = 'cam-review';
     r.innerHTML = `<img src="${url}" alt="Hasil foto">
       <div class="bar">
-        <button class="btn btn-primary btn-big" data-r="send">${icon('send')}Simpan & buka Grup Grooming</button>
-        <div class="btns"><button class="btn btn-ghost" style="background:rgba(255,255,255,.12);color:#fff" data-r="again">${icon('camera')}Ulangi</button>
-        <button class="btn btn-ghost" style="background:rgba(255,255,255,.12);color:#fff" data-r="save">${icon('download')}Simpan saja</button></div>
+        <div class="btns"><button class="btn" style="background:rgba(255,255,255,.14);color:#fff" data-r="again">${icon('camera')}Ulangi</button>
+        <button class="btn btn-primary" data-r="send">${icon('send')}Kirim</button></div>
       </div>`;
     document.body.appendChild(r);
-    r.onclick = e => {
+    r.onclick = async e => {
       const b = e.target.closest('[data-r]'); if (!b) return;
       if (b.dataset.r === 'again') { r.remove(); return; }
-      download(blob, blob.name);
-      if (b.dataset.r === 'send') {
-        openPortal(s.links.grooming);
-        toast('Foto tersimpan. Di Telegram: 📎 → pilih foto terbaru → kirim', 5000);
-      } else toast('Foto tersimpan di folder Download');
-      r.remove();
+      if (await shareFile(blob, blob.name)) r.remove();
     };
   }
 
   $('#shot', v).onclick = shoot;
   $('#thumb', v).onclick = () => lastBlob && review(lastBlob);
   $('#flip', v).onclick = async () => { facing = facing === 'user' ? 'environment' : 'user'; await db.put('kv', facing, 'cam.facing'); start(); };
-  $('#editAddr', v).onclick = () => {
+  $('#loc', v).onclick = () => {
     const cur = (manual || address || []).join('\n');
     const sh = sheet({
       title: 'Alamat di foto',

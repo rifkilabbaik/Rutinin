@@ -16,6 +16,9 @@ const H = {
   Laporan: ['Tanggal', 'Kegiatan', 'Kategori', 'Status', 'Realisasi', 'Kendala', 'Case ID', 'Foto'],
   'Open Item': ['Case ID', 'Deskripsi', 'Referensi', 'PIC', 'Target', 'Status', 'Dibuat', 'Ditutup', 'Progress Terakhir', 'Kendala Terakhir', 'Diperbarui'],
   Keputusan: ['ID', 'Dibuat', 'Keputusan', 'Alasan', 'Dampak', 'Opsi', 'Status', 'Jawaban', 'Tanggal Diputuskan'],
+  Kamus: ['Kata', 'Arti', 'Diperbarui'],
+  Foto: ['Tanggal', 'Kegiatan', 'Gambar', 'Link', 'Nama File'],
+  'Arsip PDF': ['Tanggal', 'Jenis', 'Nama File', 'Link', 'Diperbarui'],
   _Data: ['Kunci', 'Diperbarui', 'JSON 1', 'JSON 2', 'JSON 3', 'JSON 4'],
 };
 
@@ -31,6 +34,7 @@ function doPost(e) {
     if (req.action === 'ping') { ss_(); return out_({ ok: true }); }
     if (req.action === 'save') { save_(req); return out_({ ok: true, at: new Date().toISOString() }); }
     if (req.action === 'restore') return out_(Object.assign({ ok: true }, restore_()));
+    if (req.action === 'upload') return out_(Object.assign({ ok: true }, upload_(req)));
     return out_({ ok: false, error: 'Aksi tidak dikenal' });
   } catch (err) {
     return out_({ ok: false, error: String(err && err.message || err) });
@@ -121,8 +125,11 @@ function save_(req) {
   const decs = req.decisions || [];
   rewrite_(sheet_(ss, 'Keputusan'), 'Keputusan', decs.map(x => [x.id, x.created, x.what, x.reason || '', x.impact || '', x.options || '', DEC_L[x.status] || x.status, x.answer || '', x.decidedDate || '']));
 
+  const kamus = req.kamus || {};
+  rewrite_(sheet_(ss, 'Kamus'), 'Kamus', Object.keys(kamus).sort().map(k => [k, kamus[k].arti || '', kamus[k].at ? new Date(kamus[k].at) : '']));
+
   const data = sheet_(ss, '_Data');
-  putData_(data, days.map(d => ['day:' + d.date, d]).concat([['openItems', ois], ['decisions', decs]]));
+  putData_(data, days.map(d => ['day:' + d.date, d]).concat([['openItems', ois], ['decisions', decs], ['kamus', kamus]]));
 }
 
 function restore_() {
@@ -136,6 +143,41 @@ function restore_() {
     if (k.indexOf('day:') === 0) out.days.push(v);
     else if (k === 'openItems') out.openItems = v;
     else if (k === 'decisions') out.decisions = v;
+    else if (k === 'kamus') out.kamus = v;
   });
   return out;
+}
+
+// ---------- Foto laporan & arsip PDF ke Google Drive ----------
+function folder_(name, parent) {
+  const it = parent ? parent.getFoldersByName(name) : DriveApp.getFoldersByName(name);
+  return it.hasNext() ? it.next() : (parent ? parent.createFolder(name) : DriveApp.createFolder(name));
+}
+function upsertByCol_(sh, name, col, key, row) {
+  const n = H[name].length, last = sh.getLastRow();
+  const keys = last > 1 ? sh.getRange(2, col, last - 1, 1).getValues().map(r => String(r[0])) : [];
+  const idx = keys.indexOf(key);
+  const r = idx >= 0 ? idx + 2 : last + 1;
+  sh.getRange(r, 1, 1, n).setValues([row]);
+  return r;
+}
+function upload_(req) {
+  const root = folder_('Rutinin');
+  const dir = folder_(req.kind === 'pdf' ? 'Arsip PDF' : 'Foto Laporan', root);
+  const old = dir.getFilesByName(req.name);
+  while (old.hasNext()) old.next().setTrashed(true);
+  const file = dir.createFile(Utilities.newBlob(Utilities.base64Decode(req.data), req.mime, req.name));
+  const url = file.getUrl(), ss = ss_();
+  if (req.kind === 'pdf') {
+    upsertByCol_(sheet_(ss, 'Arsip PDF'), 'Arsip PDF', 3, req.name, [req.date, req.jenis === 'agenda' ? 'Agenda Kerja' : 'Laporan Kerja', req.name, url, new Date()]);
+  } else {
+    const sh = sheet_(ss, 'Foto');
+    const r = upsertByCol_(sh, 'Foto', 5, req.name, [req.date, req.title || '', '', url, req.name]);
+    try {
+      const img = SpreadsheetApp.newCellImage().setSourceUrl('data:image/jpeg;base64,' + req.thumb).setAltTextTitle(req.title || 'Foto').build();
+      sh.getRange(r, 3).setValue(img);
+      sh.setRowHeight(r, 90);
+    } catch (e) { sh.getRange(r, 3).setFormula('=HYPERLINK("' + url + '","Lihat foto")'); }
+  }
+  return { url: url };
 }

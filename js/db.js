@@ -1,5 +1,5 @@
 // IndexedDB sederhana: kv, days, openItems, photos
-const NAME = 'rutinin', VER = 1;
+const NAME = 'rutinin', VER = 2;
 let dbp;
 
 function open() {
@@ -11,6 +11,7 @@ function open() {
       if (!db.objectStoreNames.contains('days')) db.createObjectStore('days', { keyPath: 'date' });
       if (!db.objectStoreNames.contains('openItems')) db.createObjectStore('openItems', { keyPath: 'caseId' });
       if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('uploads')) db.createObjectStore('uploads', { keyPath: 'id' });
     };
     r.onsuccess = () => res(r.result);
     r.onerror = () => rej(r.error);

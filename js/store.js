@@ -18,7 +18,7 @@ export const REFS = ['Program Kerja', 'Instruksi Atasan', 'Problem Log', 'Notule
 const DEFAULT_SETTINGS = {
   nama: '', jabatan: '', atasan: '', unit: '',
   casePrefix: 'MCED-RR', caseStart: 1,
-  links: { absen: '', grooming: '', rencana: '', laporan: '' },
+  links: { absen: '' },
   scriptUrl: '', pin: '', sheetUrl: '',
   routine: [
     { start: '12:00', end: '12:30', title: 'Sholat Dzuhur', kind: 'tetap', details: [] },
@@ -70,14 +70,39 @@ export async function rememberTitle(it) {
   const m = await getMem();
   const prev = m.titles[key] || { count: 0 };
   m.titles[key] = {
-    title: it.title, details: it.details?.length ? it.details : prev.details || [], kind: it.kind,
+    title: prev.title || it.title, details: it.details?.length ? it.details : prev.details || [], kind: it.kind || prev.kind,
     ref: it.ref || prev.ref || '', pics: it.pics?.length ? it.pics : prev.pics || [],
-    support: it.support || prev.support || null, desc: it.desc || prev.desc || '',
-    count: prev.count + 1, last: Date.now(),
+    support: it.support === undefined ? prev.support || null : it.support, desc: it.desc || prev.desc || '',
+    real: { ...(prev.real || {}), ...(it.real || {}) }, kendala: it.kendala || prev.kendala || '',
+    count: (prev.count || 0) + (it.real ? 0 : 1), last: Date.now(),
   };
   await putMem(m);
 }
 export async function titleMemory() { return (await getMem()).titles; }
+// Peta jawaban (mis. alasan dukungan per dukungan, dampak per keputusan)
+export async function memMap(name) { return (await getMem()).maps?.[name] || {}; }
+export async function rememberMap(name, entries) {
+  const m = await getMem(); m.maps ||= {}; const cur = m.maps[name] ||= {};
+  for (const [k, v] of entries) if (norm(k) && String(v || '').trim()) cur[norm(k)] = String(v).trim();
+  await putMem(m);
+}
+
+// ---------- Kamus (kata/singkatan baru) ----------
+export async function getKamus() { return (await db.get('kv', 'kamus')) || {}; }
+export async function saveKamus(entries) {
+  const k = await getKamus();
+  for (const [w, arti] of entries) k[w] = { arti: String(arti || '').trim(), at: Date.now() };
+  await db.put('kv', k, 'kamus'); await markDirty();
+}
+
+// ---------- Antrean unggah ke Drive ----------
+export async function queueUpload(u) {
+  const ex = await db.get('uploads', u.id);
+  if (ex?.status === 'done' && u.kind === 'photo') return; // foto yang sudah terunggah tidak diulang
+  await db.put('uploads', { status: 'pending', at: Date.now(), ...u }); window.dispatchEvent(new Event('rutinin:dirty'));
+}
+export const allUploads = () => db.all('uploads');
+export const saveUpload = u => db.put('uploads', u);
 export async function lookupTitle(title) {
   const key = norm(title); if (!key) return null;
   const t = (await getMem()).titles;

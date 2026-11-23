@@ -75,3 +75,47 @@ export function draftRefleksi({ kpi, problem = [], nextTitles = [], lastUsulan =
     lastUsulan || '-',
   ].map(sentence);
 }
+
+// ---------- Jenis kegiatan otomatis ----------
+export function guessKind(title, mem, routine = []) {
+  const t = String(title || '').toLowerCase();
+  const r = routine.find(x => x.title.toLowerCase() === t);
+  if (r) return r.kind;
+  if (/^(sholat|shalat|salat|istirahat|ishoma|makan siang|break)\b/.test(t)) return 'tetap';
+  return mem?.kind || 'kerja';
+}
+
+// ---------- Realisasi otomatis (riwayat dulu, lalu aturan) ----------
+const REAL = [
+  [/^(follow\s*up|fu|konfirmasi|hubungi|menghubungi)\b/i, o => ({ done: `${o} sudah di-follow up dan memberi konfirmasi`, progress: `${o} sudah dihubungi, menunggu jawaban`, not: `${o} belum berhasil dihubungi` })],
+  [/^(diskusi|meeting|rapat|koordinasi|briefing)\b/i, () => ({ done: 'Diskusi selesai, hasil dan tindak lanjut dicatat', progress: 'Diskusi berjalan, dilanjutkan berikutnya', not: 'Diskusi belum terlaksana' })],
+  [/^(input|entry|entri|update|rekap|merekap|mendata)\b/i, () => ({ done: 'Seluruh data sudah terinput', progress: 'Sebagian data sudah terinput', not: 'Data belum diinput' })],
+  [/^(review|evaluasi|cek|monitoring|memantau|audit)\b/i, () => ({ done: 'Review selesai, temuan dicatat', progress: 'Review berjalan sebagian', not: 'Review belum dilakukan' })],
+  [/^(persiapan|menyiapkan|siapkan|prepare)\b/i, () => ({ done: 'Persiapan selesai', progress: 'Persiapan berjalan sebagian', not: 'Persiapan belum dimulai' })],
+  [/^(kunjungan|visit|survey|survei)\b/i, () => ({ done: 'Kunjungan terlaksana dan terdokumentasi', progress: 'Kunjungan berjalan sebagian', not: 'Kunjungan belum terlaksana' })],
+  [/^(event|pelaksanaan|acara|fld|aktivasi)\b/i, () => ({ done: 'Kegiatan terlaksana sesuai rencana', progress: 'Kegiatan berjalan sebagian', not: 'Kegiatan belum terlaksana' })],
+  [/^(penyusunan|menyusun|membuat|pembuatan|desain|finalisasi|merapikan|draft)\b/i, () => ({ done: 'Selesai disusun dan dirapikan', progress: 'Sebagian sudah disusun', not: 'Belum mulai disusun' })],
+];
+export function suggestRealisasi(title, status, mem) {
+  if (!status) return '';
+  if (mem?.real?.[status]) return mem.real[status];
+  const t = String(title || '').trim();
+  for (const [re, fn] of REAL) { const m = t.match(re); if (m) return fn(t.slice(m[0].length).trim() || t)[status]; }
+  return { done: 'Selesai sesuai rencana', progress: 'Sebagian selesai, dilanjutkan', not: 'Belum dikerjakan' }[status];
+}
+
+// ---------- Kata/singkatan yang belum dikenal ----------
+export const KAMUS_DASAR = {
+  TK: 'Taman Kanak-kanak', SD: 'Sekolah Dasar', SMP: 'Sekolah Menengah Pertama', SMA: 'Sekolah Menengah Atas', SMK: 'Sekolah Menengah Kejuruan',
+  KPI: 'Key Performance Indicator', OKR: 'Objectives and Key Results', PIC: 'Person in Charge', QA: 'Quality Assurance', HR: 'Human Resources',
+  IT: 'Information Technology', PDF: 'PDF', CS: 'Customer Service', SOP: 'Standard Operating Procedure', PO: 'Purchase Order', ATK: 'Alat Tulis Kantor',
+  UMKM: 'Usaha Mikro, Kecil, dan Menengah', GM: 'General Manager', RM: 'Regional Manager', SPV: 'Supervisor', OK: 'OK', HP: 'Handphone', WA: 'WhatsApp',
+};
+export function unknownWords(texts, kamus = {}) {
+  const out = new Set();
+  for (const t of texts) for (const w of String(t || '').match(/\b[A-Z][A-Z0-9]{1,6}\b/g) || []) {
+    if (!/[A-Z]{2}/.test(w) || KAMUS_DASAR[w] || kamus[w]) continue;
+    out.add(w);
+  }
+  return [...out];
+}
