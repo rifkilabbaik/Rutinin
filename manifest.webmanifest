@@ -1,0 +1,24 @@
+{
+  "name": "Rutinin",
+  "short_name": "Rutinin",
+  "description": "Absen, foto timestamp, Agenda Kerja & Laporan Kerja harian",
+  "id": "./",
+  "start_url": "./#/beranda",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF8F3",
+  "theme_color": "#FFF8F3",
+  "lang": "id",
+  "categories": ["productivity", "business"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Foto Absen", "short_name": "Foto", "url": "./#/foto", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Agenda Kerja", "short_name": "Agenda", "url": "./#/agenda", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Laporan Kerja", "short_name": "Laporan", "url": "./#/laporan", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
