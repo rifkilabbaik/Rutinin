@@ -81,13 +81,50 @@ export function konfirmasi(title, teks, ok = 'Ya') {
   });
 }
 
-export const field = (label, input, extra) => h('label', { class: 'field' }, h('span', null, label), input, extra);
+export function field(label, input, extra) {
+  if (input?.classList?.contains('dd') && !input.dataset.judul) input.dataset.judul = label;
+  return h('label', { class: 'field' }, h('span', null, label), input, extra);
+}
+
+function bukaDaftar(judul, daftar, nilai, onPilih) {
+  const cari = daftar.length > 8 ? h('input', { type: 'search', placeholder: 'Cari', 'aria-label': 'Cari ' + judul, maxlength: 60 }) : null;
+  const list = h('div', { class: 'dd-list', role: 'listbox', 'aria-label': judul });
+  let ctl;
+  const gambar = () => {
+    const q = (cari?.value || '').trim().toLowerCase();
+    const isi = daftar.filter(o => !q || o.l.toLowerCase().includes(q));
+    list.replaceChildren(...(isi.length ? isi.map(o => h('button', {
+      type: 'button', class: 'dd-opt' + (o.v === nilai ? ' on' : ''), role: 'option', 'aria-selected': String(o.v === nilai),
+      onclick: () => { ctl.close(); onPilih(o.v); }
+    }, h('span', null, o.l), o.v === nilai ? icon('check') : null)) : [h('p', { class: 'muted small' }, 'Tidak ditemukan.')]));
+  };
+  cari?.addEventListener('input', gambar);
+  gambar();
+  ctl = sheet({ title: judul, body: h('div', { class: 'stack-sm' }, cari, list) });
+  if (cari && window.matchMedia('(pointer: fine)').matches) cari.focus();
+}
 
 export function select(opsi, nilai, attrs = {}) {
-  return h('select', attrs, opsi.map(o => {
-    const [v, l] = Array.isArray(o) ? o : [o, o];
-    return h('option', { value: v, selected: v === nilai }, l);
-  }));
+  const semua = opsi.map(o => Array.isArray(o) ? { v: o[0], l: String(o[1]) } : { v: o, l: String(o) });
+  const awal = semua.find(o => o.v === '');
+  const placeholder = awal ? awal.l : 'Pilih';
+  const daftar = semua.filter(o => o.v !== '' || !/^Pilih/.test(o.l));
+  let v = semua.some(o => o.v === nilai) ? nilai : (awal ? '' : semua[0]?.v ?? '');
+  const { required, ...sisa } = attrs;
+  const teks = h('span', { class: 'dd-teks' });
+  const btn = h('button', { ...sisa, type: 'button', class: 'dd', 'aria-haspopup': 'listbox' }, teks, icon('down'));
+  const tulis = () => { const o = semua.find(x => x.v === v); teks.textContent = o ? o.l : placeholder; btn.classList.toggle('dd-kosong', v === ''); };
+  Object.defineProperty(btn, 'value', { get: () => v, set: x => { v = x; tulis(); } });
+  btn.addEventListener('click', e => {
+    e.preventDefault();
+    bukaDaftar(btn.dataset.judul || btn.getAttribute('aria-label') || placeholder, daftar, v, x => {
+      v = x;
+      tulis();
+      btn.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+  tulis();
+  return btn;
 }
 
 export function seg(opsi, nilai, onPilih, cls = '') {

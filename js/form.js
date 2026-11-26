@@ -24,16 +24,31 @@ function slotBerikut(d) {
   return [dariMenit(akhir), dariMenit(Math.min(akhir + 60, 23 * 60 + 59))];
 }
 
-export function formKegiatan(d, item, { onSimpan, onHapus, tak = false } = {}) {
+const DURASI = [[30, '30 menit'], [60, '1 jam'], [120, '2 jam'], [180, '3 jam']];
+
+export function formKegiatan(d, item, { onSimpan, onHapus, tak = false, mulai: mulaiAwal } = {}) {
   const baru = !item;
-  const x = item ? { ...item } : { id: uid(), jenis: '', judul: '', store: '', mulai: slotBerikut(d)[0], selesai: slotBerikut(d)[1], prio: false, label: 'Target Selesai', target: d.date, sumber: tak ? 'Jobdesk' : 'Jobdesk', oi: false, caseId: '', jadwal: '', tak, status: '', hasil: {}, alasan: '', pindah: '', fotos: [] };
+  const [m0, s0] = mulaiAwal ? [mulaiAwal, dariMenit(Math.min(menit(mulaiAwal) + 60, 1439))] : slotBerikut(d);
+  const x = item ? { ...item } : { id: uid(), jenis: '', judul: '', store: '', mulai: m0, selesai: s0, prio: false, label: 'Target Selesai', target: d.date, sumber: 'Jobdesk', oi: false, caseId: '', jadwal: '', tak, status: '', hasil: {}, alasan: '', pindah: '', fotos: [] };
+  let judulManual = !baru;
   const daftar = h('datalist', { id: 'dl-judul' });
-  const isiDaftar = () => daftar.replaceChildren(...riwayatJudul(jenis.value).map(t => h('option', { value: t })));
   const jenis = select([['', 'Pilih jenis'], ...S.master.kegiatan.map(k => [k.kode, k.nama])], x.jenis);
-  const judul = h('input', { maxlength: 60, value: x.judul, list: 'dl-judul' });
+  const isiDaftar = () => daftar.replaceChildren(...riwayatJudul(jenis.value).map(t => h('option', { value: t })));
   const store = pilihLainnya(S.master.toko.map(t => t.nama), x.store, 80, 'Pilih store');
+  const judul = h('input', { maxlength: 60, value: x.judul, list: 'dl-judul' });
+  judul.addEventListener('input', () => { judulManual = true; });
+  const isiJudul = () => { if (!judulManual) judul.value = [jenis.value, store.value].filter(Boolean).join(' ').slice(0, 60); };
+  store.el.addEventListener('change', isiJudul);
+  store.el.addEventListener('input', isiJudul);
   const mulai = h('input', { type: 'time', value: x.mulai });
   const selesai = h('input', { type: 'time', value: x.selesai });
+  const lama = () => menit(selesai.value) - menit(mulai.value);
+  const segDurasi = () => seg(DURASI, DURASI.some(([v]) => v === lama()) ? lama() : null, v => { selesai.value = dariMenit(Math.min(menit(mulai.value) + v, 1439)); });
+  let durasi = segDurasi();
+  const gantiDurasi = () => { const b = segDurasi(); durasi.replaceWith(b); durasi = b; };
+  mulai.addEventListener('change', () => { const l = Math.max(lama(), 30); selesai.value = dariMenit(Math.min(menit(mulai.value) + l, 1439)); });
+  selesai.addEventListener('change', gantiDurasi);
+  mulai.addEventListener('change', gantiDurasi);
   const sumber = select(SUMBER.includes(x.sumber) ? SUMBER : [...SUMBER, x.sumber], x.sumber);
   const target = h('input', { type: 'date', value: x.target || d.date });
   let label = x.label || 'Target Selesai';
@@ -46,25 +61,31 @@ export function formKegiatan(d, item, { onSimpan, onHapus, tak = false } = {}) {
   caseSel.addEventListener('change', () => { wadahOi.hidden = !!caseSel.value; });
   jenis.addEventListener('change', () => {
     isiDaftar();
+    isiJudul();
     if (baru && !caseSel.value) { oi = !!jenisMaster(jenis.value)?.oi; togOi.querySelector('input').checked = oi; }
   });
   isiDaftar();
-  const err = h('p', { class: 'form-err', role: 'alert', hidden: true });
-  const body = h('div', { class: 'stack' },
-    field('Jenis kegiatan', jenis), field('Judul singkat', judul), daftar,
-    h('div', { class: 'field' }, h('span', null, 'Lokasi / Store'), store.el),
+  const detail = h('div', { class: 'stack', hidden: true },
     h('div', { class: 'grid-2' }, field('Jam mulai', mulai), field('Jam selesai', selesai)),
     field('Sumber', sumber),
     toggle('Prioritas', x.prio, v => { x.prio = v; wadahPrio.hidden = !v; }), wadahPrio,
-    field('Case ID terkait', caseSel), wadahOi, err);
+    field('Case ID terkait', caseSel), wadahOi);
+  const tDetail = h('button', { type: 'button', class: 'detail-btn', 'aria-expanded': 'false' }, h('span', null, 'Detail: jam, sumber, prioritas, Open Item'), icon('down'));
+  tDetail.addEventListener('click', () => { detail.hidden = !detail.hidden; tDetail.setAttribute('aria-expanded', String(!detail.hidden)); tDetail.classList.toggle('buka', !detail.hidden); });
+  const err = h('p', { class: 'form-err', role: 'alert', hidden: true });
+  const body = h('div', { class: 'stack' },
+    field('Jenis kegiatan', jenis),
+    h('div', { class: 'field' }, h('span', null, 'Store'), store.el),
+    h('div', { class: 'field' }, h('span', null, 'Durasi'), durasi),
+    field('Judul', judul), daftar, tDetail, detail, err);
   const aksi = [];
   if (!baru && onHapus) aksi.push({ label: 'Hapus', danger: true, onClick: c => { onHapus(); c.close(); } });
   aksi.push({
     label: 'Simpan', primary: true, onClick: c => {
       const v = { jenis: jenis.value, judul: judul.value.trim(), store: store.value, mulai: mulai.value, selesai: selesai.value };
       if (!v.jenis) return tampilErr(err, 'Jenis kegiatan wajib dipilih.');
-      if (!v.judul) return tampilErr(err, 'Judul wajib diisi.');
       if (!v.store) return tampilErr(err, 'Store wajib diisi.');
+      if (!v.judul) return tampilErr(err, 'Judul wajib diisi.');
       if (!v.mulai || !v.selesai) return tampilErr(err, 'Jam wajib diisi.');
       if (menit(v.selesai) <= menit(v.mulai) && v.jenis !== 'PERJADIN') return tampilErr(err, 'Jam selesai harus setelah jam mulai.');
       if (x.prio) {
@@ -78,7 +99,7 @@ export function formKegiatan(d, item, { onSimpan, onHapus, tak = false } = {}) {
       c.close();
     }
   });
-  return sheet({ title: baru ? (tak ? 'Kegiatan Tak Terencana' : 'Tambah Kegiatan') : 'Ubah Kegiatan', body, actions: aksi });
+  return sheet({ title: tak ? 'Kegiatan Tak Terencana' : baru ? 'Isi ' + mulai.value.replace(':', '.') : 'Ubah Kegiatan', body, actions: aksi });
 }
 
 export function formSupport(x, { onSimpan, onHapus, d }) {

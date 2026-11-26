@@ -75,6 +75,7 @@ const AKSI = {
   beranda: { fn: aksiBeranda },
   simpanProfil: { tulis: true, fn: aksiSimpanProfil },
   hari: { fn: aksiHari },
+  hariLalu: { fn: aksiHariLalu },
   simpanAgenda: { tulis: true, fn: aksiSimpanAgenda },
   simpanLaporan: { tulis: true, fn: aksiSimpanLaporan },
   openItem: { fn: aksiOpenItem },
@@ -607,6 +608,18 @@ function aksiHari(b, u) {
     jadwal: baca('Jadwal').rows.filter(function (r) { return r.kode_akun === u.kode_akun && r.tanggal === tanggal && r.status !== 'Batal'; }).map(function (r) { return jadwalKeluar(r, u); }),
     openItem: oiSaya(u, false)
   };
+}
+
+function aksiHariLalu(b, u) {
+  const tanggal = tgl(b.tanggal);
+  const batas = geserHari(tanggal, -14);
+  const kerja = baca('Agenda').rows.filter(function (r) {
+    return r.kode_akun === u.kode_akun && r.tanggal < tanggal && r.tanggal >= batas && r.keterangan_hari === 'Kerja';
+  }).map(function (r) { return r.id_agenda; });
+  const keg = baca('Kegiatan').rows.filter(function (r) { return kerja.indexOf(r.id_agenda) >= 0; });
+  if (!keg.length) return null;
+  const t = keg.map(function (r) { return r.tanggal; }).sort().pop();
+  return { tanggal: t, kegiatan: keg.filter(function (r) { return r.tanggal === t; }).map(kegiatanKeluar) };
 }
 
 function cekKegiatan(x, kodeJenis, mode, tanggal) {

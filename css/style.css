@@ -186,6 +186,20 @@ textarea { resize: vertical; line-height: 1.45; }
 input:focus, select:focus, textarea:focus { border-color: var(--primary); outline: none; background: var(--surface); }
 input[type=search] { border-radius: var(--r-pill); }
 .form-err { color: var(--red); font-weight: 800; font-size: 13px; }
+.dd {
+  width: 100%; min-height: 48px; padding: 10px 14px; border: 2px solid var(--line); border-radius: 16px; background: var(--surface-2);
+  color: var(--ink); font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left;
+}
+.dd:focus-visible, .dd:active { border-color: var(--primary); }
+.dd-teks { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-kosong .dd-teks { color: var(--ink-3); }
+.dd svg.ic { color: var(--ink-2); }
+.dd-list { display: flex; flex-direction: column; gap: 6px; }
+.dd-opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 50px; padding: 10px 16px; border: none;
+  border-radius: 16px; background: var(--surface); color: var(--ink); font-weight: 800; font-size: 15px; text-align: left; box-shadow: var(--shadow);
+}
+.dd-opt.on { background: var(--soft); color: var(--primary); box-shadow: none; }
 
 .toggle { display: flex; align-items: center; gap: 12px; font-weight: 800; cursor: pointer; }
 .toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
@@ -216,6 +230,27 @@ input[type=search] { border-radius: var(--r-pill); }
 .warn.err { color: var(--red); }
 .warn svg.ic { width: 16px; height: 16px; margin-top: 1px; }
 
+.tl-grid { position: relative; margin-top: 10px; }
+.tl-jam { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line); }
+.tl-jam span { position: absolute; top: -9px; left: 0; font-size: 12px; font-weight: 800; color: var(--ink-3); background: var(--bg); padding-right: 6px; }
+.tl-lajur { position: absolute; left: 50px; right: 0; top: 0; bottom: 0; }
+.tl-blk, .tl-slot { position: absolute; border-radius: 16px; text-align: left; overflow: hidden; }
+.tl-blk { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: none; color: var(--ink); }
+.tl-blk.k { background: var(--surface); box-shadow: var(--shadow); border-left: 5px solid var(--primary); }
+.tl-blk.k.c-blue { border-left-color: var(--blue); } .tl-blk.k.c-green { border-left-color: var(--green); } .tl-blk.k.c-yellow { border-left-color: #D4A100; }
+.tl-blk.k.c-purple { border-left-color: var(--purple); } .tl-blk.k.c-pink { border-left-color: #B42350; }
+.tl-blk b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-blk small { font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-blk .chips { margin-top: 2px; }
+.tl-blk.s { background: var(--surface-2); border: 2px dashed var(--line); color: var(--ink-2); flex-direction: row; align-items: center; justify-content: space-between; }
+.tl-blk.tipis { flex-direction: row; align-items: center; gap: 8px; padding-top: 0; padding-bottom: 0; }
+.tl-blk.tipis small, .tl-blk.tipis .chips { display: none; }
+.tl-blk.s.tipis b { font-size: 11px; }
+.tl-slot { display: flex; align-items: center; gap: 6px; padding: 0 12px; border: 2px dashed var(--line); background: transparent; color: var(--ink-3); font-weight: 800; font-size: 12px; }
+.tl-slot svg.ic { width: 16px; height: 16px; }
+.tl-slot:hover, .tl-slot:focus-visible { border-color: var(--primary); background: var(--soft); color: var(--primary); }
+.detail-btn { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 10px 14px; border: none; border-radius: 16px; background: var(--surface); color: var(--ink-2); font-weight: 800; font-size: 13px; text-align: left; box-shadow: var(--shadow); }
+.detail-btn.buka svg.ic { transform: rotate(180deg); }
 .date-bar { display: flex; align-items: center; gap: 8px; }
 .date-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
 .date-input { min-height: 36px; padding: 4px 12px; border-radius: var(--r-pill); font-size: 13px; width: auto; }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rutinin-v2';
+const CACHE_NAME = 'rutinin-v3';
 const APP_SHELL = [
   './', './index.html', './manifest.json', './css/style.css',
   './js/app.js', './js/util.js', './js/config.js', './js/db.js', './js/api.js', './js/auth.js', './js/home.js',

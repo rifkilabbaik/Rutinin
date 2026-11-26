@@ -51,9 +51,9 @@ export function formDataDiri(onTersimpan, tombol = 'Simpan') {
   if (!pil.region.length || !pil.jabatan.length || !pil.atasan.length || !pil.unit.length) {
     return kosong('Pilihan data diri belum diisi admin.', 'Muat Ulang', async () => { await muatMaster(); location.reload(); });
   }
-  const region = select([['', 'Pilih region'], ...pil.region], p.region || '', { required: true });
-  const jabatan = select([['', 'Pilih jabatan'], ...pil.jabatan], p.jabatan || '', { required: true });
-  const unit = select([['', 'Pilih unit kerja'], ...pil.unit], p.unit || '', { required: true });
+  const region = select([['', 'Pilih region'], ...pil.region], p.region || '');
+  const jabatan = select([['', 'Pilih jabatan'], ...pil.jabatan], p.jabatan || '');
+  const unit = select([['', 'Pilih unit kerja'], ...pil.unit], p.unit || '');
   const dipilih = new Set(p.atasan || []);
   const atasan = h('div', { class: 'chips' }, pil.atasan.map(a => {
     const b = h('button', { type: 'button', class: 'chip-btn' + (dipilih.has(a) ? ' on' : ''), 'aria-pressed': String(dipilih.has(a)) }, a);
@@ -70,7 +70,8 @@ export function formDataDiri(onTersimpan, tombol = 'Simpan') {
     class: 'card', onsubmit: async e => {
       e.preventDefault();
       err.hidden = true;
-      if (!dipilih.size) { err.textContent = 'Atasan wajib dipilih.'; err.hidden = false; return; }
+      const kurang = !region.value ? 'Region' : !jabatan.value ? 'Jabatan' : !dipilih.size ? 'Atasan' : !unit.value ? 'Unit Kerja' : '';
+      if (kurang) { err.textContent = kurang + ' wajib dipilih.'; err.hidden = false; return; }
       btn.disabled = true;
       try {
         S.profil = await api('simpanProfil', { region: region.value, jabatan: jabatan.value, atasan: [...dipilih], unit: unit.value });

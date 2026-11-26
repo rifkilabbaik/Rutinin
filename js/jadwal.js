@@ -39,7 +39,7 @@ export async function render(v, arg) {
   function form() {
     const tanggal = h('input', { type: 'date', min: iso(), value: iso(), required: true });
     const jam = h('input', { type: 'time', value: '09:00', required: true });
-    const jenis = select([['', 'Pilih jenis'], ...S.master.kegiatan.map(k => [k.kode, k.nama])], '', { required: true });
+    const jenis = select([['', 'Pilih jenis'], ...S.master.kegiatan.map(k => [k.kode, k.nama])], '');
     const store = pilihLainnya(S.master.toko.map(t => t.nama), '', 80, 'Pilih store');
     const ket = h('input', { maxlength: 150 });
     const err = h('p', { class: 'form-err', role: 'alert', hidden: true });
@@ -48,6 +48,7 @@ export async function render(v, arg) {
       class: 'card', onsubmit: async e => {
         e.preventDefault();
         err.hidden = true;
+        if (!jenis.value) { err.textContent = 'Jenis kegiatan wajib dipilih.'; err.hidden = false; return; }
         if (!store.value) { err.textContent = 'Store wajib diisi.'; err.hidden = false; return; }
         btn.disabled = true;
         try {
