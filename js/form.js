@@ -1,4 +1,4 @@
-import { h, icon, field, select, seg, sheet, toggle, toast, chip, uid, menit, dariMenit, iso, geser, pilihLainnya, kompres, pilihGaleri } from './util.js';
+import { h, icon, field, select, seg, sheet, toggle, toast, chip, uid, menit, dariMenit, iso, geser, pilihLainnya, kompres, pilihGaleri, lamaTeks } from './util.js';
 import { S, jenisMaster } from './api.js';
 import { db } from './db.js';
 
@@ -26,6 +26,25 @@ function slotBerikut(d) {
 
 const DURASI = [[30, '30 menit'], [60, '1 jam'], [120, '2 jam'], [180, '3 jam']];
 
+function pilihDurasi(awal, onUbah, kosongAwal) {
+  const pecah = m => { const out = new Set(); let sisa = m; [180, 120, 60, 30].forEach(v => { if (sisa >= v) { out.add(v); sisa -= v; } }); return sisa ? new Set() : out; };
+  let dipilih = kosongAwal ? new Set() : pecah(awal);
+  const total = h('span', { class: 'durasi-total' });
+  const tombol = DURASI.map(([v, l]) => {
+    const b = h('button', { type: 'button', class: 'chip-btn' }, l);
+    b.addEventListener('click', () => { dipilih.has(v) ? dipilih.delete(v) : dipilih.add(v); tulis(); onUbah([...dipilih].reduce((a, x) => a + x, 0)); });
+    return [v, b];
+  });
+  let lama = awal;
+  const tulis = () => {
+    tombol.forEach(([v, b]) => { b.classList.toggle('on', dipilih.has(v)); b.setAttribute('aria-pressed', String(dipilih.has(v))); });
+    const jml = [...dipilih].reduce((a, x) => a + x, 0) || lama;
+    total.textContent = jml > 0 ? 'Total ' + lamaTeks(jml) : '';
+  };
+  tulis();
+  return { el: h('div', { class: 'stack-sm' }, h('div', { class: 'chips' }, tombol.map(([, b]) => b)), total), set(m) { lama = m; dipilih = pecah(m); tulis(); } };
+}
+
 export function formKegiatan(d, item, { onSimpan, onHapus, tak = false, mulai: mulaiAwal } = {}) {
   const baru = !item;
   const [m0, s0] = mulaiAwal ? [mulaiAwal, dariMenit(Math.min(menit(mulaiAwal) + 60, 1439))] : slotBerikut(d);
@@ -43,12 +62,9 @@ export function formKegiatan(d, item, { onSimpan, onHapus, tak = false, mulai: m
   const mulai = h('input', { type: 'time', value: x.mulai });
   const selesai = h('input', { type: 'time', value: x.selesai });
   const lama = () => menit(selesai.value) - menit(mulai.value);
-  const segDurasi = () => seg(DURASI, DURASI.some(([v]) => v === lama()) ? lama() : null, v => { selesai.value = dariMenit(Math.min(menit(mulai.value) + v, 1439)); });
-  let durasi = segDurasi();
-  const gantiDurasi = () => { const b = segDurasi(); durasi.replaceWith(b); durasi = b; };
-  mulai.addEventListener('change', () => { const l = Math.max(lama(), 30); selesai.value = dariMenit(Math.min(menit(mulai.value) + l, 1439)); });
-  selesai.addEventListener('change', gantiDurasi);
-  mulai.addEventListener('change', gantiDurasi);
+  const durasi = pilihDurasi(lama(), m => { if (m > 0) selesai.value = dariMenit(Math.min(menit(mulai.value) + m, 1439)); }, baru);
+  mulai.addEventListener('change', () => { const l = Math.max(lama(), 30); selesai.value = dariMenit(Math.min(menit(mulai.value) + l, 1439)); durasi.set(lama()); });
+  selesai.addEventListener('change', () => durasi.set(lama()));
   const sumber = select(SUMBER.includes(x.sumber) ? SUMBER : [...SUMBER, x.sumber], x.sumber);
   const target = h('input', { type: 'date', value: x.target || d.date });
   let label = x.label || 'Target Selesai';
@@ -76,7 +92,7 @@ export function formKegiatan(d, item, { onSimpan, onHapus, tak = false, mulai: m
   const body = h('div', { class: 'stack' },
     field('Jenis kegiatan', jenis),
     h('div', { class: 'field' }, h('span', null, 'Store'), store.el),
-    h('div', { class: 'field' }, h('span', null, 'Durasi'), durasi),
+    h('div', { class: 'field' }, h('span', null, 'Durasi'), durasi.el),
     field('Judul', judul), daftar, tDetail, detail, err);
   const aksi = [];
   if (!baru && onHapus) aksi.push({ label: 'Hapus', danger: true, onClick: c => { onHapus(); c.close(); } });

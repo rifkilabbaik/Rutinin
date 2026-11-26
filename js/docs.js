@@ -110,7 +110,7 @@ export function blokFoto(fotos) {
 export function blokSop(r, p) {
   const B = [
     blk('d-title', h('h1', null, 'PENILAIAN ' + r.judul.toUpperCase()), h('h2', null, 'SEDJATI GROUP')),
-    blk('d-head', kv([['Nama Toko', r.store], [r.labelPetugas, r.petugas], ['Hari/Tanggal', tglPanjang(r.tanggal)], ['Jam', jamTampil(r.jam)], r.area ? ['Area', r.area] : null, ['Penilai', p.nama]])),
+    blk('d-head', kv([['Nama Toko', r.store], r.labelPetugas ? [r.labelPetugas, r.petugas] : null, ['Hari/Tanggal', tglPanjang(r.tanggal)], ['Jam', jamTampil(r.jam)], r.area ? ['Area', r.area] : null, ['Penilai', p.nama]])),
     blk('score', h('div', null, h('span', null, 'POIN'), h('b', null, r.poinTeks)), h('div', null, h('span', null, 'KATEGORI'), dchip(r.kategori)))
   ];
   r.bagian.forEach(b => {

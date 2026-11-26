@@ -228,3 +228,19 @@ export function pilihLainnya(opsi, nilai, maks = 80, kosongLabel = 'Pilih') {
   sel.addEventListener('change', () => { inp.hidden = sel.value !== '__lain'; if (!inp.hidden) inp.focus(); });
   return { el: h('div', { class: 'stack-sm' }, sel, inp), get value() { return sel.value === '__lain' ? inp.value.trim() : sel.value; } };
 }
+
+export function muatLayar(teks = 'Memuat') {
+  const label = h('p', null, teks);
+  const el = h('div', { class: 'muat-layar', role: 'status', 'aria-live': 'polite' }, h('div', { class: 'muat-kotak' }, h('span', { class: 'spinner' }), label));
+  document.body.append(el);
+  return { teks: t => { label.textContent = t; }, tutup: () => el.remove() };
+}
+
+export function lamaTeks(m) {
+  const j = Math.floor(m / 60), r = m % 60;
+  if (!j) return r + ' menit';
+  if (r === 30) return j + ',5 jam';
+  return j + ' jam' + (r ? ' ' + r + ' menit' : '');
+}
+
+export const nomorWa = p => { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('0')) d = '62' + d.slice(1); return d; };

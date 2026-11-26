@@ -1,6 +1,6 @@
-import { h, icon, field, select, seg, sheet, toast, chip, kosong, memuat, baris, seksi, jamTampil, tgl, iso, pilihLainnya, konfirmasi } from './util.js';
+import { h, icon, field, select, seg, sheet, toast, chip, kosong, memuat, baris, seksi, jamTampil, tgl, iso, pilihLainnya, konfirmasi, muatLayar } from './util.js';
 import { S, api, jenisMaster } from './api.js';
-import { STATUS_KEG, ambilHari, simpanLokal, payload, cekLaporan, barTanggal, statusBar, kotakCek, kolomHasil, ringkasHasil, statusKpi, ringkasan, tawaranOi, unggahFoto, daftarOiLaporan, OI_AKHIR } from './hari.js';
+import { STATUS_KEG, ambilHari, lokalHari, simpanLokal, payload, cekLaporan, barTanggal, statusBar, kotakCek, kolomHasil, ringkasHasil, statusKpi, ringkasan, tawaranOi, unggahFoto, daftarOiLaporan, OI_AKHIR } from './hari.js';
 import { formKegiatan, formSupport, formDecision, kelolaFoto, tampilErr } from './form.js';
 import { formOiBaru, formUbahOi } from './openitem.js';
 import { judulOi } from './home.js';
@@ -20,8 +20,10 @@ async function siapkan(v, arg, rute, gambarIsi) {
     if (ulang) gambar();
   }
   const muat = async () => {
+    const lokal = await lokalHari(tanggal);
+    if (lokal && !st.d) { st.d = lokal; gambar(); }
     try { ({ d: st.d, offline: st.offline } = await ambilHari(tanggal)); gambar(); }
-    catch (e) { wadah.replaceChildren(kosong(e.message, 'Coba Lagi', muat)); }
+    catch (e) { if (st.d) toast(e.message); else wadah.replaceChildren(kosong(e.message, 'Coba Lagi', muat)); }
   };
   st.muatUlang = async () => { ({ d: st.d, offline: st.offline } = await ambilHari(tanggal)); gambar(); };
   muat();
@@ -89,11 +91,13 @@ async function tawarkan(d, item) {
   item.tawaran = true;
   await simpanLokal(d);
   if (!(await konfirmasi('Buat Open Item?', `[${t.jenis.toUpperCase()}] ${t.deskripsi}`, 'Buat'))) return;
+  const ml = muatLayar('Membuat Open Item');
   try {
     const oi = await api('simpanOpenItem', { item: { ...t, pic: t.pic || [S.profil.nama], status: t.status || 'Rencana', progress: 'Dibuat dari laporan ' + tgl(d.date) } });
     if (!OI_AKHIR.includes(oi.status)) S.oi = [...(S.oi || []), oi];
     toast('Open Item ' + oi.caseId + ' dibuat');
   } catch (e) { toast(e.message); }
+  finally { ml.tutup(); }
 }
 
 function isiLaporan(st, ubah, gambar) {
@@ -143,10 +147,12 @@ function tombol(st, gambar) {
     const c = cekLaporan(d);
     if (c.galat.length) return toast(c.galat[0]);
     b.disabled = true;
+    const ml = muatLayar('Menyimpan laporan');
     try {
       if (!d.summary.length && d.ket === 'Kerja') d.summary = ringkasan(d);
       d.oiLap = daftarOiLaporan(d).map(({ upd, ...o }) => o);
-      await unggahFoto(d);
+      await unggahFoto(d, (i, n) => ml.teks(`Mengunggah foto ${i} dari ${n}`));
+      ml.teks('Menyimpan laporan');
       const oi = Object.entries(d.oiUpd).map(([caseId, u]) => {
         const o = daftarOiLaporan(d).find(x => x.caseId === caseId) || {};
         return { caseId, progress: u.progress || '', kendala: u.kendala || '', status: u.status || o.status || 'Proses', target: u.target || o.target || '', alasanTarget: u.alasanTarget || '', pic: u.pic || [], tglTinjau: u.tglTinjau || '', alasanBatal: u.alasanBatal || '' };
@@ -157,6 +163,7 @@ function tombol(st, gambar) {
       await st.muatUlang();
       toast('Laporan tersimpan');
     } catch (x) { toast(x.message); b.disabled = false; }
+    finally { ml.tutup(); }
   };
   const kirim = async () => {
     const { kirimLaporan } = await import('./send.js');

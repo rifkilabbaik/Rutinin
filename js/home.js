@@ -1,5 +1,6 @@
-import { h, icon, tglPanjang, tgl, jamTampil, jamDari, chip, kosong, memuat, badgeTgl, baris, seksi } from './util.js';
-import { S, api, namaJenis } from './api.js';
+import { h, icon, tglPanjang, tgl, jamDari, chip, kosong, memuat, badgeTgl, baris, seksi } from './util.js';
+import { S, api, pasangMaster, simpanCache, ambilCache } from './api.js';
+import { kartuJadwal } from './jadwal.js';
 import { db } from './db.js';
 import { lewat } from './hari.js';
 
@@ -24,14 +25,6 @@ export function barisOi(oi, onclick) {
     badge: h('span', { class: 'badge tone-lilac' }, icon('list')),
     title: judulOi(oi), sub: `${oi.caseId} | Target ${tgl(oi.target)}`,
     right: lewat(oi) ? chip('Lewat target') : chip(oi.status), onclick, href: onclick ? null : '#openitem'
-  });
-}
-
-export function barisJadwal(j, onclick) {
-  return baris({
-    badge: badgeTgl(j.tanggal, 'pink'), title: namaJenis(j.jenis),
-    sub: [jamTampil(j.jam), j.store, j.nama].filter(Boolean).join(' | '),
-    right: chip(j.status), onclick, href: onclick ? null : '#jadwal'
   });
 }
 
@@ -63,8 +56,9 @@ function isi(d, draf) {
       h('a', { class: 'mini', href: '#laporan' }, h('div', { class: 'mini-label' }, 'Laporan'), statusDok(d.laporan, draf?.laporanDirty))));
   out.push(hero);
   out.push(seksi('Menu', h('div', { class: 'tool-grid' }, MENU.map(([r, l, ic, t]) => h('a', { class: 'tool', href: '#' + r }, h('span', { class: 'tool-ic tone-' + t }, icon(ic)), l)))));
-  out.push(seksi('Jadwal minggu ini', d.jadwalMinggu.length ? d.jadwalMinggu.slice(0, 5).map(j => barisJadwal(j)) : kosong('Belum ada jadwal minggu ini.', 'Tambah Jadwal', '#jadwal/input'), ['Semua', '#jadwal']));
-  out.push(seksi('Jadwal belum dikonfirmasi', d.jadwalBelum.length ? d.jadwalBelum.slice(0, 5).map(j => barisJadwal(j)) : kosong('Semua jadwal sudah dikonfirmasi.'), ['Semua', '#jadwal']));
+  out.push(seksi('Jadwal minggu ini', d.jadwalMinggu.length ? d.jadwalMinggu.slice(0, 5).map(j => kartuJadwal(j)) : kosong('Belum ada jadwal minggu ini.', 'Tambah Jadwal', '#jadwal/input'), ['Semua', '#jadwal']));
+  const perlu = (d.perluUpdate || []).filter(j => j.milik);
+  if (perlu.length) out.push(seksi('Perlu update', perlu.slice(0, 5).map(j => kartuJadwal(j)), ['Semua', '#jadwal']));
   out.push(seksi('Komplain terbaru', d.komplain ? (d.komplain.length ? d.komplain.map(barisKomplain) : kosong('Belum ada komplain.')) : kosong(d.komplainGagal, 'Buka Komplain', '#komplain'), ['Semua', '#komplain']));
   const oi = [...d.openItem].sort((a, b) => (lewat(b) - lewat(a)) || String(a.target).localeCompare(String(b.target)));
   out.push(seksi('Open Item', oi.length ? oi.slice(0, 5).map(o => barisOi(o)) : kosong('Tidak ada Open Item aktif.', 'Tambah Open Item', '#openitem'), ['Semua', '#openitem']));
@@ -79,11 +73,15 @@ function isi(d, draf) {
 export async function render(v) {
   const p = S.profil;
   v.append(h('div', { class: 'greet' }, h('h2', null, 'Halo, ' + p.nama.split(' ')[0]), h('div', { class: 'muted' }, [p.jabatan, p.region].filter(Boolean).join(' | '))));
+  if (!cache) { const c = ambilCache('beranda'); if (c) cache = { d: c, draf: null }; }
   const wadah = h('div', { class: 'stack' }, cache ? isi(cache.d, cache.draf) : memuat());
   v.append(wadah);
   const muat = async () => {
     try {
-      const d = await api('beranda');
+      let d;
+      if (!S.segar) { const r = await api('awal'); pasangMaster(r.master); d = r.beranda; }
+      else d = await api('beranda');
+      simpanCache('beranda', d);
       const draf = await db.get('days', d.hari).catch(() => null);
       wadah.replaceChildren(...isi(d, draf));
       cache = { d, draf };

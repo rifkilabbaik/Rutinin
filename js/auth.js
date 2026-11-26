@@ -1,4 +1,4 @@
-import { h, icon, field, select, toast, kosong } from './util.js';
+import { h, icon, field, select, toast, kosong, muatLayar } from './util.js';
 import { S, sesi, api, muatMaster, profilLengkap } from './api.js';
 
 function kepala() {
@@ -73,13 +73,14 @@ export function formDataDiri(onTersimpan, tombol = 'Simpan') {
       const kurang = !region.value ? 'Region' : !jabatan.value ? 'Jabatan' : !dipilih.size ? 'Atasan' : !unit.value ? 'Unit Kerja' : '';
       if (kurang) { err.textContent = kurang + ' wajib dipilih.'; err.hidden = false; return; }
       btn.disabled = true;
+      const ml = muatLayar('Menyimpan data diri');
       try {
         S.profil = await api('simpanProfil', { region: region.value, jabatan: jabatan.value, atasan: [...dipilih], unit: unit.value });
         await muatMaster();
         toast('Data diri tersimpan');
         onTersimpan?.();
       } catch (x) { err.textContent = x.message; err.hidden = false; }
-      finally { btn.disabled = false; }
+      finally { btn.disabled = false; ml.tutup(); }
     }
   }, field('Region', region), field('Jabatan', jabatan), h('div', { class: 'field' }, h('span', null, 'Atasan'), atasan), field('Unit Kerja', unit), err, btn);
 }

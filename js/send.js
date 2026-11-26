@@ -1,4 +1,4 @@
-import { h, sheet, toast, memuat, unduh, salin, keBase64, keDataUrl } from './util.js';
+import { h, sheet, toast, unduh, salin, keBase64, keDataUrl, muatLayar } from './util.js';
 import { S, api } from './api.js';
 import { db } from './db.js';
 import { buatPdf } from './pdf.js';
@@ -17,11 +17,11 @@ export async function bagikan(blob, nama, teks) {
 }
 
 export async function kirimPdf({ jenis, tanggal, blok, namaFile, teks, onTerkirim }) {
-  const tunggu = sheet({ title: 'Menyiapkan PDF', body: memuat() });
+  const tunggu = muatLayar('Membuat PDF');
   let pdf;
   try { pdf = await buatPdf(blok, namaFile); }
-  catch { tunggu.close(); toast('PDF gagal dibuat.'); return; }
-  tunggu.close();
+  catch { tunggu.tutup(); toast('PDF gagal dibuat.'); return; }
+  tunggu.tutup();
   sheet({
     title: namaFile.replace(/\.pdf$/, ''), full: true,
     body: h('div', { class: 'preview' }, pdf.gambar.map((src, i) => h('img', { src, alt: 'Halaman ' + (i + 1) }))),
@@ -31,10 +31,12 @@ export async function kirimPdf({ jenis, tanggal, blok, namaFile, teks, onTerkiri
         label: 'Kirim', primary: true, onClick: async x => {
           if (!(await bagikan(pdf.blob, pdf.namaFile, teks))) return;
           x.close();
+          const ml = muatLayar('Mengunggah PDF');
           let link = '';
           try { link = (await api('unggah', { jenis: 'pdf', nama: namaFile, data: await keBase64(pdf.blob), tanggal })).link; } catch {}
           try { onTerkirim?.(await api('catatKirim', { jenis, tanggal, link })); }
           catch (e) { toast('Catatan kirim gagal: ' + e.message); }
+          finally { ml.tutup(); }
         }
       }
     ]

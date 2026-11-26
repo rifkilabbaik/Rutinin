@@ -2,6 +2,7 @@ import { h, icon, chip, seg, field, toast, konfirmasi, dariMenit, menit, jamTamp
 import { S, sesi, api, muatMaster } from './api.js';
 import { formDataDiri } from './auth.js';
 import { db } from './db.js';
+import { CONFIG } from './config.js';
 
 const KUNCI_JAM = 'rutinin.jam';
 
@@ -61,5 +62,6 @@ export function pengaturan(v) {
           await db.clear('days').catch(() => {});
           location.hash = 'masuk';
         }
-      }, icon('out'), 'Keluar')));
+      }, icon('out'), 'Keluar'),
+      h('p', { class: 'muted small center-text' }, 'Versi ' + CONFIG.VERSI)));
 }

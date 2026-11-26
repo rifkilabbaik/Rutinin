@@ -1,8 +1,8 @@
-import { h, icon, field, seg, sheet, toast, chip, kosong, memuat, baris, seksi, jamTampil, tgl, iso, dariMenit, menit, uid, geser, konfirmasi } from './util.js';
+import { h, icon, field, seg, sheet, toast, chip, kosong, memuat, baris, seksi, jamTampil, tgl, iso, dariMenit, menit, uid, geser, konfirmasi, muatLayar } from './util.js';
 
 const JENIS_DARI_OI = { 'Komplain': 'KOMP', 'Temuan SOP': 'SOP', 'Follow Up Proposal': 'PROP', 'Event': 'EVENT', 'Lead Catering': 'GCOM' };
 import { S, api } from './api.js';
-import { KET, ambilHari, simpanLokal, payload, cekAgenda, saranUntuk, jamDefault, barTanggal, statusBar, kotakCek, lewat } from './hari.js';
+import { KET, ambilHari, lokalHari, simpanLokal, payload, cekAgenda, saranUntuk, jamDefault, barTanggal, statusBar, kotakCek, lewat } from './hari.js';
 import { formKegiatan, formSupport, formDecision } from './form.js';
 import { formOiBaru } from './openitem.js';
 import { judulOi } from './home.js';
@@ -13,8 +13,10 @@ export async function render(v, arg) {
   v.append(barTanggal(tanggal, 'agenda'), wadah);
   let d, offline;
   const muat = async () => {
+    const lokal = await lokalHari(tanggal);
+    if (lokal && !d) { d = lokal; offline = false; gambar(); }
     try { ({ d, offline } = await ambilHari(tanggal)); gambar(); }
-    catch (e) { wadah.replaceChildren(kosong(e.message, 'Coba Lagi', muat)); }
+    catch (e) { if (d) toast(e.message); else wadah.replaceChildren(kosong(e.message, 'Coba Lagi', muat)); }
   };
 
   async function ubah(fn, ulang = true) {
@@ -127,8 +129,10 @@ export async function render(v, arg) {
   async function salinKemarin(e) {
     const b = e.currentTarget;
     b.disabled = true;
+    const ml = muatLayar('Mengambil agenda sebelumnya');
     try {
       const r = await api('hariLalu', { tanggal });
+      ml.tutup();
       if (!r) return toast('Tidak ada agenda kerja dalam 14 hari terakhir.');
       if (d.items.length && !(await konfirmasi('Salin kemarin', `Kegiatan dari ${tgl(r.tanggal)} ditambahkan ke agenda ini.`, 'Salin'))) return;
       await ubah(() => r.kegiatan.forEach(k => {
@@ -142,7 +146,7 @@ export async function render(v, arg) {
       }));
       toast('Kegiatan dari ' + tgl(r.tanggal) + ' disalin');
     } catch (x) { toast(x.message); }
-    finally { b.disabled = false; }
+    finally { ml.tutup(); b.disabled = false; }
   }
 
   function ubahSaran(s) {
@@ -188,6 +192,7 @@ export async function render(v, arg) {
     const cek = cekAgenda(d);
     if (cek.galat.length) return toast(cek.galat[0]);
     b.disabled = true;
+    const ml = muatLayar('Menyimpan agenda');
     try {
       await api('simpanAgenda', { hari: payload(d) });
       d.agendaDirty = false;
@@ -196,6 +201,7 @@ export async function render(v, arg) {
       toast('Agenda tersimpan');
       gambar();
     } catch (x) { toast(x.message); b.disabled = false; }
+    finally { ml.tutup(); }
   }
 
   async function kirim() {

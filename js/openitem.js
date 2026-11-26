@@ -1,5 +1,5 @@
-import { h, icon, field, select, seg, sheet, toast, chip, kosong, memuat, geser, iso, tgl, pilihLainnya } from './util.js';
-import { S, api } from './api.js';
+import { h, icon, field, select, seg, sheet, toast, chip, kosong, memuat, geser, iso, tgl, pilihLainnya, muatLayar } from './util.js';
+import { S, api, simpanCache, ambilCache } from './api.js';
 import { pilihPic, tampilErr } from './form.js';
 import { barisOi, judulOi } from './home.js';
 import { OI_AKHIR } from './hari.js';
@@ -39,12 +39,14 @@ export function formOiBaru(onSimpan, awal = {}) {
         if (!ref.value) return tampilErr(err, 'Referensi wajib dipilih.');
         if (!pic.value.length) return tampilErr(err, 'PIC wajib dipilih.');
         if (!target.value) return tampilErr(err, 'Target wajib diisi.');
+        const ml = muatLayar('Menyimpan Open Item');
         try {
           const oi = await api('simpanOpenItem', { item: { jenis: jenis.value, deskripsi: desk.value.trim(), referensi: ref.value, store: store.value, pic: pic.value, target: target.value, status: status.value, tglTinjau: tinjau.value, alasanBatal: batal.value.trim(), progress: awal.progress || '' } });
           toast('Open Item ' + oi.caseId + ' dibuat');
           c.close();
           onSimpan?.(oi);
         } catch (x) { tampilErr(err, x.message); }
+        finally { ml.tutup(); }
       }
     }]
   });
@@ -86,15 +88,17 @@ export function formUbahOi(oi, { awal = {}, onSimpan, simpanLangsung = true } = 
         if (x.status === 'Ditunda' && !x.tglTinjau) return tampilErr(err, 'Tanggal tinjau wajib diisi.');
         if (x.status === 'Batal' && !x.alasanBatal) return tampilErr(err, 'Alasan batal wajib diisi.');
         if (!simpanLangsung) { onSimpan?.(x); c.close(); return; }
+        const ml = muatLayar('Menyimpan Open Item');
         try { const baru = await api('simpanOpenItem', { item: x }); toast('Open Item tersimpan'); c.close(); onSimpan?.(baru); }
         catch (e) { tampilErr(err, e.message); }
+        finally { ml.tutup(); }
       }
     }]
   });
 }
 
 export async function render(v) {
-  let tab = 'aktif', data = null;
+  let tab = 'aktif', data = ambilCache('oi');
   const wadah = h('div', { class: 'section' }, memuat());
   v.append(seg([['aktif', 'Aktif'], ['tutup', 'Selesai']], tab, t => { tab = t; gambar(); }), wadah,
     h('button', { type: 'button', class: 'btn btn-primary btn-block', onclick: () => formOiBaru(() => muat()) }, icon('plus'), 'Tambah Open Item'));
@@ -103,9 +107,10 @@ export async function render(v) {
     wadah.replaceChildren(...(isi.length ? isi.map(o => barisOi(o, () => formUbahOi(o, { onSimpan: () => muat() }))) : [kosong(tab === 'aktif' ? 'Tidak ada Open Item aktif.' : 'Belum ada Open Item selesai.')]));
   };
   const muat = async () => {
-    wadah.replaceChildren(memuat());
-    try { data = await api('openItem'); S.oi = data.filter(o => !OI_AKHIR.includes(o.status)); gambar(); }
-    catch (e) { wadah.replaceChildren(kosong(e.message, 'Coba Lagi', muat)); }
+    if (!data) wadah.replaceChildren(memuat());
+    try { data = await api('openItem'); simpanCache('oi', data); S.oi = data.filter(o => !OI_AKHIR.includes(o.status)); gambar(); }
+    catch (e) { if (!data) wadah.replaceChildren(kosong(e.message, 'Coba Lagi', muat)); else toast(e.message); }
   };
+  if (data) gambar();
   muat();
 }

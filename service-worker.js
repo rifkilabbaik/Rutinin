@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rutinin-v3';
+const CACHE_NAME = 'rutinin-v4';
 const APP_SHELL = [
   './', './index.html', './manifest.json', './css/style.css',
   './js/app.js', './js/util.js', './js/config.js', './js/db.js', './js/api.js', './js/auth.js', './js/home.js',
@@ -10,7 +10,10 @@ const APP_SHELL = [
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(APP_SHELL)));
-  self.skipWaiting();
+});
+
+self.addEventListener('message', e => {
+  if (e.data === 'lewati') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {

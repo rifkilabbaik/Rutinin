@@ -3,13 +3,13 @@ import { CONFIG } from './config.js';
 const KUNCI_TOKEN = 'rutinin.token';
 const KUNCI_MASTER = 'rutinin.master';
 
-export const S = { profil: null, master: null, oi: [] };
+export const S = { profil: null, master: null, oi: [], segar: false };
 
 export const sesi = {
   get token() { try { return localStorage.getItem(KUNCI_TOKEN) || ''; } catch { return ''; } },
   set(t) { try { localStorage.setItem(KUNCI_TOKEN, t); } catch {} },
   hapus() {
-    try { localStorage.removeItem(KUNCI_TOKEN); localStorage.removeItem(KUNCI_MASTER); } catch {}
+    try { Object.keys(localStorage).filter(k => k.startsWith('rutinin.')).forEach(k => localStorage.removeItem(k)); } catch {}
     S.profil = null; S.master = null; S.oi = [];
   }
 };
@@ -34,8 +34,24 @@ export async function api(action, data = {}) {
   return out.data;
 }
 
+export function pasangMaster(m) {
+  S.master = m;
+  S.profil = m.profil;
+  S.segar = true;
+  try { localStorage.setItem(KUNCI_MASTER, JSON.stringify(m)); } catch {}
+}
+
+export function simpanCache(k, data) {
+  try { localStorage.setItem('rutinin.c.' + k, JSON.stringify(data)); } catch {}
+}
+
+export function ambilCache(k) {
+  try { return JSON.parse(localStorage.getItem('rutinin.c.' + k) || 'null'); } catch { return null; }
+}
+
 export async function muatMaster() {
   const m = await api('master');
+  S.segar = true;
   S.master = m;
   S.profil = m.profil;
   try { localStorage.setItem(KUNCI_MASTER, JSON.stringify(m)); } catch {}

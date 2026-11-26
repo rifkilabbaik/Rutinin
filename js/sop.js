@@ -1,4 +1,4 @@
-import { h, icon, field, select, seg, sheet, toast, chip, kosong, iso, z, HARI, BULAN, parse, jamTampil, tglFile, keBase64, keDataUrl } from './util.js';
+import { h, icon, field, select, seg, sheet, toast, chip, kosong, iso, z, HARI, BULAN, parse, jamTampil, tglFile, keBase64, keDataUrl, muatLayar } from './util.js';
 import { S, api } from './api.js';
 import { db } from './db.js';
 import { kelolaFoto, tampilErr } from './form.js';
@@ -6,7 +6,7 @@ import { kelolaFoto, tampilErr } from './form.js';
 const JENIS = [
   { kode: '7langkah', judul: '7 Langkah Pelayanan', petugas: 'Nama Kasir', ic: 'chat', tone: 'sky' },
   { kode: 'doublecheck', judul: 'Double Check Order', petugas: 'Nama Kasir/Server', ic: 'check', tone: 'mint' },
-  { kode: 'kebersihan', judul: 'Kebersihan', petugas: 'Nama Auditor', ic: 'sop', tone: 'lilac' }
+  { kode: 'kebersihan', judul: 'Kebersihan', petugas: '', ic: 'sop', tone: 'lilac' }
 ];
 const kategori = p => p >= 100 ? 'Sempurna' : p >= 90 ? 'Sangat Baik' : p >= 80 ? 'Baik' : p >= 75 ? 'Cukup' : 'Buruk';
 const pct = v => { const r = Math.round(v * 100) / 100; return (Number.isInteger(r) ? r : r.toFixed(2)) + '%'; };
@@ -48,7 +48,7 @@ const simpanSt = () => db.put('kv', st, 'sop').catch(() => {});
 
 function teks() {
   const J = info(), { bag, poin, kategori: k } = hitung(), pad = l => l.padEnd(13);
-  let t = `PENILAIAN ${J.judul.toUpperCase()}\n\n${pad('Nama Toko')}: ${st.store}\n${pad(J.petugas)}: ${st.petugas}\n${pad('Hari/Tanggal')}: ${hariTgl(st.tanggal)}\n${pad('Jam')}: ${jamTampil(st.jam)}\n`;
+  let t = `PENILAIAN ${J.judul.toUpperCase()}\n\n${pad('Nama Toko')}: ${st.store}\n${J.petugas ? `${pad(J.petugas)}: ${st.petugas}\n` : ''}${pad('Hari/Tanggal')}: ${hariTgl(st.tanggal)}\n${pad('Jam')}: ${jamTampil(st.jam)}\n`;
   if (st.jenis === 'kebersihan') t += `${pad('Area')}: ${teksArea()}\n`;
   bag.forEach(b => {
     t += `\n${b.nama.toUpperCase()}\n`;
@@ -99,15 +99,15 @@ export async function render(v) {
     const err = h('p', { class: 'form-err', role: 'alert', hidden: true });
     return [
       h('div', { class: 'card' }, h('div', { class: 'sec-head' }, h('h3', { class: 'h-sm' }, J.judul), h('button', { type: 'button', class: 'link', onclick: () => ke('jenis') }, 'Ganti')),
-        field('Nama Toko', store), field(J.petugas, petugas), h('div', { class: 'grid-2' }, field('Tanggal', tanggal), field('Jam', jam)),
+        field('Nama Toko', store), J.petugas ? field(J.petugas, petugas) : null, h('div', { class: 'grid-2' }, field('Tanggal', tanggal), field('Jam', jam)),
         area ? h('div', { class: 'field' }, h('span', null, 'Area'), area) : null, err,
         h('button', {
           type: 'button', class: 'btn btn-primary btn-block', onclick: () => {
             if (!store.value) return tampilErr(err, 'Nama toko wajib dipilih.');
-            if (!petugas.value.trim()) return tampilErr(err, J.petugas + ' wajib diisi.');
+            if (J.petugas && !petugas.value.trim()) return tampilErr(err, J.petugas + ' wajib diisi.');
             if (!tanggal.value || !jam.value) return tampilErr(err, 'Tanggal dan jam wajib diisi.');
             if (area && !st.area.length) return tampilErr(err, 'Pilih minimal satu area.');
-            Object.assign(st, { store: store.value, petugas: petugas.value.trim(), tanggal: tanggal.value, jam: jam.value, simpan: null });
+            Object.assign(st, { store: store.value, petugas: J.petugas ? petugas.value.trim() : '', tanggal: tanggal.value, jam: jam.value, simpan: null });
             ke('nilai');
           }
         }, 'Lanjut', icon('next')))
@@ -158,6 +158,7 @@ export async function render(v) {
   async function simpan(e) {
     const b = e.currentTarget;
     b.disabled = true;
+    const ml = muatLayar('Menyimpan penilaian');
     try {
       const { bag, poin, kategori: k } = hitung();
       for (const arr of Object.values(st.foto)) {
@@ -165,6 +166,7 @@ export async function render(v) {
           if (f.link || !f.id) continue;
           const p = await db.get('photos', f.id);
           if (!p) continue;
+          ml.teks('Mengunggah foto');
           f.link = (await api('unggah', { jenis: 'foto', nama: `Takbiran ${st.store} ${tglFile(st.tanggal)}.jpg`, data: await keBase64(p.blob), tanggal: st.tanggal, terkait: 'takbiran' })).link;
           await simpanSt();
         }
@@ -176,6 +178,7 @@ export async function render(v) {
       toast('Penilaian tersimpan');
       gambar();
     } catch (x) { toast(x.message); b.disabled = false; }
+    finally { ml.tutup(); }
   }
 
   async function kirim() {
@@ -202,7 +205,7 @@ export async function render(v) {
     const J = info(), { bag, poin, kategori: k } = hitung();
     return [
       h('div', { class: 'hero center' }, h('div', { class: 'hero-label' }, J.judul), h('div', { class: 'hero-value' }, pct(poin)), h('div', { class: 'hero-sub' }, k)),
-      h('div', { class: 'card' }, ...[['Nama Toko', st.store], [J.petugas, st.petugas], ['Hari/Tanggal', hariTgl(st.tanggal)], ['Jam', jamTampil(st.jam)], st.jenis === 'kebersihan' ? ['Area', teksArea()] : null].filter(Boolean).map(([a, b]) => h('div', { class: 'kv' }, h('span', null, a), h('b', null, b)))),
+      h('div', { class: 'card' }, ...[['Nama Toko', st.store], J.petugas ? [J.petugas, st.petugas] : null, ['Hari/Tanggal', hariTgl(st.tanggal)], ['Jam', jamTampil(st.jam)], st.jenis === 'kebersihan' ? ['Area', teksArea()] : null].filter(Boolean).map(([a, b]) => h('div', { class: 'kv' }, h('span', null, a), h('b', null, b)))),
       ...bag.map(g => h('section', { class: 'section' }, h('h3', { class: 'h-sm' }, g.nama), g.item.map(x => h('div', { class: 'row' }, h('span', { class: 'row-text' }, h('span', { class: 'row-title' }, x.item), st.ket[x.key] ? h('span', { class: 'row-sub' }, st.ket[x.key]) : null), chip(String(st.nilai[x.key]), st.nilai[x.key] === 'Tidak' || Number(st.nilai[x.key]) <= 2 ? 'red' : Number(st.nilai[x.key]) === 3 ? 'yellow' : 'green'))))),
       st.simpan ? h('div', { class: 'chips' }, chip('Tersimpan ' + jamTampil(st.simpan.jam.split(' ')[1] || ''), 'blue')) : null,
       h('div', { class: 'actions' },

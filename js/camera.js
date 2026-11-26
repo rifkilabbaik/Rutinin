@@ -1,5 +1,7 @@
-import { h, icon, sheet, field, z, HARI, BULAN } from './util.js';
+import { h, icon, sheet, field, z, HARI, BULAN, unduh, toast } from './util.js';
 import { bagikan } from './send.js';
+
+const RASIO = [['3:4', 3 / 4], ['1:1', 1], ['9:16', 9 / 16]];
 
 const stampTanggal = d => `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()} ${z(d.getHours())}.${z(d.getMinutes())}`;
 const simpanKv = (k, v) => { try { localStorage.setItem('rutinin.cam.' + k, JSON.stringify(v)); } catch {} };
@@ -48,7 +50,13 @@ const jarak = (a, b) => { const R = 6371e3, r = Math.PI / 180, dLat = (b.lat - a
 
 export function bukaKamera({ pilih = false } = {}) {
   return new Promise(selesai => {
-    let hadap = ambilKv('hadap', 'environment'), manual = ambilKv('alamat', null);
+    let hadap = ambilKv('hadap', 'environment'), manual = ambilKv('alamat', null), rasio = ambilKv('rasio', '3:4');
+    const nilaiRasio = () => (RASIO.find(x => x[0] === rasio) || RASIO[0])[1];
+    const potong = () => {
+      const vw = vid.videoWidth || 720, vh = vid.videoHeight || 1280, r = nilaiRasio();
+      const cw = vw / vh > r ? vh * r : vw, ch = vw / vh > r ? vh : vw / r;
+      return { sx: (vw - cw) / 2, sy: (vh - ch) / 2, cw: Math.round(cw), ch: Math.round(ch) };
+    };
     let stream = null, timer = null, watch = null, pos = null, geoDi = null, addr = null, sibuk = false, tutup = false;
     const vid = h('video', { playsinline: true, muted: true, autoplay: true });
     vid.muted = true;
@@ -58,6 +66,11 @@ export function bukaKamera({ pilih = false } = {}) {
     const lok = h('button', { type: 'button', class: 'cam-loc' }, icon('pin'), 'Mencari lokasi');
     const root = h('div', { class: 'cam', role: 'dialog', 'aria-label': 'Kamera' }, stage,
       h('div', { class: 'cam-top' }, h('button', { type: 'button', class: 'cam-btn', 'aria-label': 'Tutup', onclick: () => akhiri(null) }, icon('x')), lok),
+      h('div', { class: 'cam-rasio', role: 'group', 'aria-label': 'Rasio foto' }, RASIO.map(([k]) => {
+        const b = h('button', { type: 'button', class: 'cam-r' + (k === rasio ? ' on' : ''), 'aria-pressed': String(k === rasio) }, k);
+        b.addEventListener('click', () => { rasio = k; simpanKv('rasio', k); root.querySelectorAll('.cam-r').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); }); pas(); });
+        return b;
+      })),
       h('div', { class: 'cam-bar' }, h('span', { class: 'cam-gap' }), h('button', { type: 'button', class: 'shutter', 'aria-label': 'Ambil foto', onclick: jepret }),
         h('button', { type: 'button', class: 'cam-btn', 'aria-label': 'Balik kamera', onclick: () => { hadap = hadap === 'user' ? 'environment' : 'user'; simpanKv('hadap', hadap); mulai(); } }, icon('flip'))));
     document.body.append(root);
@@ -66,14 +79,14 @@ export function bukaKamera({ pilih = false } = {}) {
     const tulisLok = () => { const l = manual || addr; lok.replaceChildren(icon('pin'), l ? l[0] : pos ? 'Mencari alamat' : 'Mencari lokasi'); };
 
     function pas() {
-      const vw = vid.videoWidth || 720, vh = vid.videoHeight || 1280;
+      const r = nilaiRasio(), { cw, ch } = potong();
       const W = stage.clientWidth, H = stage.clientHeight;
-      let w = W, hh = W * vh / vw;
-      if (hh > H) { hh = H; w = H * vw / vh; }
+      let w = W, hh = W / r;
+      if (hh > H) { hh = H; w = H * r; }
       frame.style.width = w + 'px';
       frame.style.height = hh + 'px';
-      ov.width = vw;
-      ov.height = vh;
+      ov.width = cw;
+      ov.height = ch;
       overlay();
     }
     function overlay() { const c = ov.getContext('2d'); c.clearRect(0, 0, ov.width, ov.height); gambarStamp(c, ov.width, ov.height, baris()); }
@@ -106,10 +119,11 @@ export function bukaKamera({ pilih = false } = {}) {
       if (sibuk || !vid.videoWidth) return;
       sibuk = true;
       const d = new Date();
-      const c = h('canvas', { width: vid.videoWidth, height: vid.videoHeight });
+      const { sx, sy, cw, ch } = potong();
+      const c = h('canvas', { width: cw, height: ch });
       const ctx = c.getContext('2d');
       if (hadap === 'user') { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
-      ctx.drawImage(vid, 0, 0, c.width, c.height);
+      ctx.drawImage(vid, sx, sy, cw, ch, 0, 0, cw, ch);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       gambarStamp(ctx, c.width, c.height, baris(d));
       const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
@@ -120,11 +134,12 @@ export function bukaKamera({ pilih = false } = {}) {
     function tinjau(blob, nama) {
       const url = URL.createObjectURL(blob);
       const r = h('div', { class: 'cam-review' }, h('img', { src: url, alt: 'Hasil foto' }),
-        h('div', { class: 'cam-review-bar' },
+        h('div', { class: 'cam-review-bar' + (pilih ? '' : ' tiga') },
           h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => { URL.revokeObjectURL(url); r.remove(); } }, icon('cam'), 'Ulangi'),
+          pilih ? null : h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => { unduh(blob, nama); toast('Foto tersimpan di folder Download'); } }, icon('save'), 'Simpan'),
           pilih
             ? h('button', { type: 'button', class: 'btn btn-primary', onclick: () => { URL.revokeObjectURL(url); r.remove(); akhiri(blob); } }, icon('check'), 'Pakai')
-            : h('button', { type: 'button', class: 'btn btn-primary', onclick: async () => { if (await bagikan(blob, nama)) { URL.revokeObjectURL(url); r.remove(); } } }, icon('send'), 'Kirim')));
+            : h('button', { type: 'button', class: 'btn btn-primary', onclick: async () => { await bagikan(blob, nama); } }, icon('send'), 'Kirim')));
       root.append(r);
     }
 

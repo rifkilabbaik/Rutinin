@@ -29,11 +29,13 @@ function kosongHari(tanggal) {
   };
 }
 
+export const judulJadwal = j => (j.k1 || j.pic || j.ket || j.jenis || '').replace(/\s+/g, ' ').trim();
+
 function dariJadwal(j) {
-  const m = jenisMaster(j.jenis);
+  const m = jenisMaster(j.kode);
   return {
-    id: uid(), jenis: j.jenis, judul: (j.keterangan || m?.nama || j.jenis).slice(0, 60), store: j.store, mulai: j.jam,
-    selesai: dariMenit(menit(j.jam) + 60), prio: false, label: '', target: '', sumber: 'Jadwal', oi: !!m?.oi, caseId: '',
+    id: uid(), jenis: j.kode, judul: judulJadwal(j).slice(0, 60), store: j.store, mulai: j.jam,
+    selesai: dariMenit(Math.min(menit(j.jam) + 60, 1439)), prio: false, label: '', target: '', sumber: 'Jadwal', oi: !!m?.oi, caseId: '',
     jadwal: j.id, tak: false, status: '', hasil: {}, alasan: '', pindah: '', fotos: []
   };
 }
@@ -90,6 +92,15 @@ export async function ambilHari(tanggal) {
   let srv = null;
   try { srv = await api('hari', { tanggal }); S.oi = srv.openItem; } catch (e) { if (e.message === 'Sesi berakhir.') throw e; }
   let d;
+  const kini = srv ? await db.get('days', tanggal).catch(() => null) : null;
+  if (kini && (kini.agendaDirty || kini.laporanDirty)) {
+    d = kini;
+    d.lalu = srv.permintaan.filter(p => p.tanggal < tanggal);
+    if (srv.agenda) d.agenda = { simpan: srv.agenda.simpan, kirim: srv.agenda.kirim, jumlah: srv.agenda.jumlah };
+    if (srv.laporan) d.laporan = { ...d.laporan, simpan: srv.laporan.simpan, kirim: srv.laporan.kirim, jumlah: srv.laporan.jumlah };
+    await simpanLokal(d);
+    return { d, offline: false };
+  }
   if (lokal && (lokal.agendaDirty || lokal.laporanDirty)) {
     d = lokal;
     if (srv) {
@@ -217,10 +228,15 @@ export function tawaranOi(i, tanggal) {
   return null;
 }
 
-export async function unggahFoto(d) {
+export const lokalHari = tanggal => db.get('days', tanggal).catch(() => null);
+
+export async function unggahFoto(d, onJalan) {
+  const antre = d.items.flatMap(it => (it.fotos || []).filter(f => !f.link && f.id).map(f => [it, f]));
+  let ke = 0;
   for (const it of d.items) {
     for (const f of it.fotos || []) {
       if (f.link || !f.id) continue;
+      onJalan?.(++ke, antre.length);
       const p = await db.get('photos', f.id);
       if (!p) continue;
       const r = await api('unggah', { jenis: 'foto', nama: `${it.judul} ${tglFile(d.date)}.jpg`, data: await keBase64(p.blob), tanggal: d.date, terkait: it.id });

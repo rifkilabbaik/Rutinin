@@ -22,7 +22,8 @@ const KOLOM = {
   Permintaan: ['id', 'kode_akun', 'tanggal', 'jenis', 'isi', 'ditujukan_ke', 'alasan', 'dampak', 'opsi', 'batas_waktu', 'terkait', 'jawaban', 'status'],
   KirimLog: ['waktu', 'kode_akun', 'jenis', 'tanggal_dokumen', 'nomor_kirim', 'link_pdf'],
   Foto: ['id', 'tanggal', 'kode_akun', 'terkait', 'link_drive'],
-  Jadwal: ['id', 'kode_akun', 'nama', 'region', 'tanggal', 'jam', 'kode_jenis', 'store', 'keterangan', 'status', 'dibuat'],
+  Jadwal: ['id', 'kode_akun', 'nama', 'region', 'tanggal', 'jam', 'jenis', 'kode_kegiatan', 'store', 'keterangan_1', 'keterangan_2', 'nama_pic', 'nomor_pic', 'keterangan', 'status', 'dibuat', 'diubah'],
+  MasterJadwal: ['jenis', 'kode_kegiatan', 'isian', 'urutan', 'aktif'],
   HasilSOP: ['id', 'kode_akun', 'tanggal', 'jam', 'jenis', 'store', 'petugas', 'area', 'hasil', 'poin', 'kategori', 'waktu_simpan']
 };
 
@@ -52,7 +53,15 @@ const SEED = {
   MasterTujuan: [['Atasan'], ['Store Leader'], ['Supply Chain'], ['Finance'], ['GA'], ['Kreatif'], ['Lainnya']],
   MasterPendukung: [['Cek aplikasi online', ''], ['Cek komplain terbaru', ''], ['Follow up lead', ''], ['Update tracker proposal', '']],
   MasterBlokSaran: [['Istirahat dan Dzuhur', '12:00', '13:00'], ['Ashar', '15:15', '15:30']],
-  MasterJamKerja: [['Senin,Selasa,Rabu,Kamis,Jumat', '08:00', '17:00'], ['Sabtu', '08:00', '15:00']]
+  MasterJamKerja: [['Senin,Selasa,Rabu,Kamis,Jumat', '08:00', '17:00'], ['Sabtu', '08:00', '15:00']],
+  MasterJadwal: [
+    ['FLD', 'FLD', 'Nama sekolah:k1; Jumlah peserta:k2:angka; PIC sekolah:pic; No WA:wa', 1, 'YA'],
+    ['Cooking Class', 'CC', 'Nama sekolah:k1; Jumlah peserta:k2:angka; PIC sekolah:pic; No WA:wa', 2, 'YA'],
+    ['GCOM', 'GCOM', 'Nama komunitas:k1; Jumlah peserta:k2:angka; PIC komunitas:pic; No WA:wa', 3, 'YA'],
+    ['Support Event', 'EVENT', 'Event:k1; PIC pemesan catering:pic; No WA:wa; Jumlah box:k2:angka', 4, 'YA'],
+    ['Catering', 'EVENT', 'PIC pemesan catering:pic; No WA:wa; Jumlah box:k2:angka', 5, 'YA'],
+    ['Lainnya', '', '', 6, 'YA']
+  ]
 };
 
 const KET_HARI = ['Kerja', 'Day Off', 'Cuti', 'Sakit', 'Izin'];
@@ -62,7 +71,7 @@ const STATUS_KEG = ['Selesai', 'Sebagian', 'Tidak Terlaksana', 'Dipindah'];
 const STATUS_OI = ['Rencana', 'Proses', 'Selesai', 'Didelegasikan', 'Ditunda', 'Batal'];
 const OI_AKHIR = ['Selesai', 'Didelegasikan', 'Batal'];
 const JENIS_OI = ['Komplain', 'Temuan SOP', 'Lead Catering', 'Follow Up Proposal', 'Event', 'Instruksi Atasan', 'Lainnya'];
-const STATUS_JADWAL = ['Belum dikonfirmasi', 'Terkonfirmasi', 'Batal'];
+const STATUS_JADWAL = ['Terjadwal', 'Selesai', 'Batal'];
 const JENIS_SOP = ['7langkah', 'doublecheck', 'kebersihan'];
 const KATEGORI_SOP = ['Sempurna', 'Sangat Baik', 'Baik', 'Cukup', 'Buruk'];
 const JENIS_KIRIM = ['Agenda', 'Laporan', 'Takbiran'];
@@ -71,6 +80,7 @@ const AKSI = {
   daftar: { publik: true, tulis: true, fn: aksiDaftar },
   masuk: { publik: true, tulis: true, fn: aksiMasuk },
   keluar: { tulis: true, fn: aksiKeluar },
+  awal: { fn: aksiAwal },
   master: { fn: aksiMaster },
   beranda: { fn: aksiBeranda },
   simpanProfil: { tulis: true, fn: aksiSimpanProfil },
@@ -136,9 +146,22 @@ function siapkanSheet() {
   const s = ss();
   Object.keys(KOLOM).forEach(function (nama) {
     let sh = s.getSheetByName(nama);
-    if (sh) return;
-    sh = s.insertSheet(nama);
     const head = KOLOM[nama];
+    if (sh) {
+      const lama = sh.getLastColumn() ? sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(norm) : [];
+      if (sh.getLastRow() <= 1) {
+        if (lama.join() !== head.map(norm).join()) {
+          sh.clear();
+          sh.getRange(1, 1, sh.getMaxRows(), head.length).setNumberFormat('@');
+          sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
+        }
+      } else {
+        const kurang = head.filter(function (h) { return lama.indexOf(norm(h)) < 0; });
+        if (kurang.length) sh.getRange(1, lama.length + 1, 1, kurang.length).setValues([kurang]).setFontWeight('bold');
+      }
+      return;
+    }
+    sh = s.insertSheet(nama);
     sh.getRange(1, 1, sh.getMaxRows(), head.length).setNumberFormat('@');
     sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
     sh.setFrozenRows(1);
@@ -322,8 +345,41 @@ function jsonAman(s, def) {
   try { return JSON.parse(s); } catch (e) { return def; }
 }
 
+function cacheSimpan(k, str, detik) {
+  const n = Math.ceil(str.length / 80000) || 1;
+  if (n > 60) return;
+  const obj = {};
+  obj[k] = String(n);
+  for (let i = 0; i < n; i++) obj[k + ':' + i] = str.slice(i * 80000, (i + 1) * 80000);
+  CacheService.getScriptCache().putAll(obj, detik);
+}
+
+function cacheAmbil(k) {
+  const c = CacheService.getScriptCache();
+  const n = Number(c.get(k));
+  if (!n) return null;
+  const keys = [];
+  for (let i = 0; i < n; i++) keys.push(k + ':' + i);
+  const m = c.getAll(keys);
+  let out = '';
+  for (let i = 0; i < n; i++) { if (m[keys[i]] == null) return null; out += m[keys[i]]; }
+  return out;
+}
+
+function bacaCepat(nama, detik) {
+  const memo = cacheAmbil('b:' + nama);
+  if (memo) return JSON.parse(memo);
+  const rows = baca(nama).rows;
+  cacheSimpan('b:' + nama, JSON.stringify(rows), detik || 300);
+  return rows;
+}
+
+function lupakan(nama) {
+  CacheService.getScriptCache().remove('b:' + nama);
+}
+
 function setelan(kunci) {
-  const r = baca('Pengaturan').rows.filter(function (x) { return x.kunci === kunci; })[0];
+  const r = bacaCepat('Pengaturan').filter(function (x) { return x.kunci === kunci; })[0];
   return r ? r.nilai : '';
 }
 
@@ -384,7 +440,9 @@ function pengguna(token) {
     kode = s.kode_akun;
     c.put('s:' + th, kode, 21600);
   }
-  const u = baca('Users').rows.filter(function (r) { return r.kode_akun === kode; })[0];
+  const cari = function () { return bacaCepat('Users', 60).filter(function (r) { return r.kode_akun === kode; })[0]; };
+  let u = cari();
+  if (!u || !aktif(u)) { lupakan('Users'); u = cari(); }
   if (!u || !aktif(u)) gagal('Akun tidak aktif.', 'SESI');
   u._th = th;
   return u;
@@ -399,6 +457,7 @@ function aksiDaftar(b) {
   const kode = buatKode(nama, t.rows.map(function (r) { return String(r.kode_akun).toUpperCase(); }));
   const salt = acak();
   tambah(t, [{ nama: nama, kode_akun: kode, password_hash: hashPw(pw, salt), salt: salt, status: '', tanggal_daftar: sekarang() }]);
+  lupakan('Users');
   return { pesan: pesanAdmin('Pendaftaran terkirim.') };
 }
 
@@ -423,8 +482,7 @@ function aksiKeluar(b, u) {
 }
 
 function bacaToko() {
-  const c = CacheService.getScriptCache();
-  const memo = c.get('toko');
+  const memo = cacheAmbil('toko');
   if (memo) return JSON.parse(memo);
   const sh = ss().getSheets().filter(function (s) { return s.getName().trim().toLowerCase() === 'toko'; })[0];
   if (!sh) gagal('Sheet Toko tidak ditemukan.');
@@ -436,7 +494,7 @@ function bacaToko() {
   const out = v.map(function (r) {
     return { nama: sel(r[iT]), region: sel(r[iR]), area: iA >= 0 ? sel(r[iA]) : '' };
   }).filter(function (t) { return t.nama; });
-  c.put('toko', JSON.stringify(out), 600);
+  cacheSimpan('toko', JSON.stringify(out), 600);
   return out;
 }
 
@@ -449,7 +507,7 @@ function tokoUntuk(u) {
 
 function kolomPilihan(k) {
   const out = [];
-  baca('Pilihan').rows.forEach(function (r) { if (r[k] && out.indexOf(r[k]) < 0) out.push(r[k]); });
+  bacaCepat('Pilihan').forEach(function (r) { if (r[k] && out.indexOf(r[k]) < 0) out.push(r[k]); });
   return out;
 }
 
@@ -460,7 +518,7 @@ function daftarRegion() {
 }
 
 function masterKegiatan() {
-  return baca('MasterKegiatan').rows.filter(aktifRow).sort(function (a, b) { return Number(a.urutan) - Number(b.urutan); }).map(function (r) {
+  return bacaCepat('MasterKegiatan').filter(aktifRow).sort(function (a, b) { return Number(a.urutan) - Number(b.urutan); }).map(function (r) {
     return {
       kode: r.kode, nama: r.nama, hasil: r.kolom_hasil, foto: ya(r.foto_wajib), lapangan: ya(r.lapangan), oi: ya(r.jadi_open_item),
       kpi: r.kode_kpi ? r.kode_kpi.split(',').map(function (x) { return x.trim(); }).filter(Boolean) : []
@@ -469,27 +527,28 @@ function masterKegiatan() {
 }
 
 function kolomSatu(nama, k) {
-  return baca(nama).rows.map(function (r) { return r[k]; }).filter(Boolean);
+  return bacaCepat(nama).map(function (r) { return r[k]; }).filter(Boolean);
 }
 
 function aksiMaster(b, u) {
-  const sop = baca('MasterSOP').rows.filter(aktifRow).sort(function (a, b2) { return Number(a.urutan) - Number(b2.urutan); }).map(function (r) {
+  const sop = bacaCepat('MasterSOP', 600).filter(aktifRow).sort(function (a, b2) { return Number(a.urutan) - Number(b2.urutan); }).map(function (r) {
     return { jenis: r.jenis, bagian: r.bagian, item: r.item, bobot: Number(r.bobot) || 0, k: [r.k1, r.k2, r.k3, r.k4, r.k5] };
   });
   return {
     profil: profil(u),
     pilihan: { region: daftarRegion(), jabatan: kolomPilihan('jabatan'), atasan: kolomPilihan('atasan'), unit: kolomPilihan('unit_kerja') },
     kegiatan: masterKegiatan(),
-    kpi: baca('MasterKPI').rows.filter(aktifRow).map(function (r) { return { kode: r.kode_kpi, nama: r.nama }; }),
+    kpi: bacaCepat('MasterKPI').filter(aktifRow).map(function (r) { return { kode: r.kode_kpi, nama: r.nama }; }),
     alasan: kolomSatu('MasterAlasan', 'alasan'),
     referensi: kolomSatu('MasterReferensi', 'referensi'),
     tujuan: kolomSatu('MasterTujuan', 'tujuan'),
-    pendukung: baca('MasterPendukung').rows.filter(function (r) { return r.item && (!r.kode_akun || r.kode_akun === u.kode_akun); }).map(function (r) { return r.item; }),
-    saran: baca('MasterBlokSaran').rows.filter(function (r) { return r.nama; }).map(function (r) { return { nama: r.nama, mulai: r.mulai, selesai: r.selesai }; }),
-    jamKerja: baca('MasterJamKerja').rows.filter(function (r) { return r.hari; }).map(function (r) { return { hari: r.hari.split(',').map(function (x) { return x.trim(); }), mulai: r.mulai, selesai: r.selesai }; }),
+    pendukung: bacaCepat('MasterPendukung').filter(function (r) { return r.item && (!r.kode_akun || r.kode_akun === u.kode_akun); }).map(function (r) { return r.item; }),
+    saran: bacaCepat('MasterBlokSaran').filter(function (r) { return r.nama; }).map(function (r) { return { nama: r.nama, mulai: r.mulai, selesai: r.selesai }; }),
+    jamKerja: bacaCepat('MasterJamKerja').filter(function (r) { return r.hari; }).map(function (r) { return { hari: r.hari.split(',').map(function (x) { return x.trim(); }), mulai: r.mulai, selesai: r.selesai }; }),
     sop: sop,
     toko: tokoUntuk(u),
-    member: baca('Users').rows.filter(aktif).map(function (r) { return r.nama; }).sort(),
+    jadwal: masterJadwal(),
+    member: bacaCepat('Users', 60).filter(aktif).map(function (r) { return r.nama; }).sort(),
     linkAbsen: setelan('link_absen')
   };
 }
@@ -504,6 +563,7 @@ function aksiSimpanProfil(b, u) {
   const t = baca('Users');
   const row = t.rows.filter(function (r) { return r.kode_akun === u.kode_akun; })[0];
   ubah(t, row, { region: region, jabatan: jabatan, atasan: atasan.join(', '), unit: unit });
+  lupakan('Users');
   return profil(Object.assign({}, row, { region: region, jabatan: jabatan, atasan: atasan.join(', '), unit: unit }));
 }
 
@@ -529,8 +589,24 @@ function oiSaya(u, semua) {
   }).map(oiKeluar);
 }
 
+function masterJadwal() {
+  return bacaCepat('MasterJadwal').filter(function (r) { return r.jenis && aktifRow(r); }).sort(function (x, y) { return Number(x.urutan) - Number(y.urutan); }).map(function (r) {
+    return {
+      jenis: r.jenis, kode: r.kode_kegiatan,
+      isian: String(r.isian || '').split(';').map(function (x) { return x.trim(); }).filter(Boolean).map(function (x) {
+        const p = x.split(':').map(function (y) { return y.trim(); });
+        return { label: p[0], slot: p[1], tipe: p[2] || '' };
+      }).filter(function (f) { return ['k1', 'k2', 'pic', 'wa'].indexOf(f.slot) >= 0; })
+    };
+  });
+}
+
 function jadwalKeluar(r, u) {
-  return { id: r.id, nama: r.nama, tanggal: r.tanggal, jam: r.jam, jenis: r.kode_jenis, store: r.store, keterangan: r.keterangan, status: r.status, milik: r.kode_akun === u.kode_akun || admin(u) };
+  return {
+    id: r.id, nama: r.nama, kodeAkun: r.kode_akun, region: r.region, tanggal: r.tanggal, jam: r.jam, jenis: r.jenis, kode: r.kode_kegiatan,
+    store: r.store, k1: r.keterangan_1, k2: r.keterangan_2, pic: r.nama_pic, wa: r.nomor_pic, ket: r.keterangan,
+    status: r.status || 'Terjadwal', diubah: r.diubah || r.dibuat, milik: r.kode_akun === u.kode_akun || admin(u)
+  };
 }
 
 function jadwalTerlihat(u, dari, sampai) {
@@ -556,9 +632,8 @@ function aksiBeranda(b, u) {
   const hari = hariIni();
   const p = hari.split('-').map(Number);
   const dow = new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay();
-  const senin = geserHari(hari, dow === 0 ? -6 : 1 - dow);
-  const jad = jadwalTerlihat(u, senin, geserHari(hari, 60));
-  const minggu = geserHari(senin, 6);
+  const awalMinggu = geserHari(hari, -dow);
+  const jad = jadwalTerlihat(u, geserHari(hari, -90), geserHari(awalMinggu, 6));
   let komplain = null, komplainGagal = '';
   try { komplain = komplainUntuk(u).slice(0, 3); } catch (e) { komplainGagal = e && e.pesan ? e.pesan : 'Komplain gagal dimuat.'; }
   const id = u.kode_akun + '-' + hari.replace(/-/g, '');
@@ -567,8 +642,8 @@ function aksiBeranda(b, u) {
     .map(function (r) { return { tanggal: r.tanggal, catatan: r.catatan_atasan, review: r.status_review }; });
   return {
     hari: hari,
-    jadwalMinggu: jad.filter(function (j) { return j.tanggal <= minggu && j.status !== 'Batal'; }).slice(0, 20),
-    jadwalBelum: jad.filter(function (j) { return j.tanggal >= hari && j.status === 'Belum dikonfirmasi'; }).slice(0, 20),
+    jadwalMinggu: jad.filter(function (j) { return j.tanggal >= awalMinggu && j.status !== 'Batal'; }).slice(0, 20),
+    perluUpdate: jad.filter(function (j) { return j.tanggal < hari && j.status === 'Terjadwal'; }).slice(0, 20),
     komplain: komplain,
     komplainGagal: komplainGagal,
     openItem: oiSaya(u, false),
@@ -778,6 +853,7 @@ function aksiSimpanAgenda(b, u) {
   simpanPermintaan(u, v);
   const mp = baca('MasterPendukung');
   const sudah = mp.rows.filter(function (r) { return !r.kode_akun || r.kode_akun === u.kode_akun; }).map(function (r) { return r.item.toLowerCase(); });
+  lupakan('MasterPendukung');
   tambah(mp, v.pendukung.filter(function (p) { return sudah.indexOf(p.teks.toLowerCase()) < 0; }).map(function (p) { return { item: p.teks, kode_akun: u.kode_akun }; }));
   return { caseIds: caseIds, jamSimpan: jam };
 }
@@ -832,6 +908,7 @@ function aksiSimpanLaporan(b, u) {
   }
   const ma = baca('MasterAlasan');
   const adaAlasan = ma.rows.map(function (r) { return String(r.alasan).toLowerCase(); });
+  lupakan('MasterAlasan');
   tambah(ma, v.items.filter(function (k, i, arr) {
     return k.alasan && adaAlasan.indexOf(k.alasan.toLowerCase()) < 0 && arr.findIndex(function (y) { return y.alasan.toLowerCase() === k.alasan.toLowerCase(); }) === i;
   }).map(function (k) { return { alasan: k.alasan }; }));
@@ -907,7 +984,32 @@ function aksiSimpanOpenItem(b, u) {
 
 function aksiJadwal(b, u) {
   const hari = hariIni();
-  return jadwalTerlihat(u, geserHari(hari, -7), geserHari(hari, 90));
+  return jadwalTerlihat(u, geserHari(hari, -180), geserHari(hari, 365));
+}
+
+function cekIsiJadwal(x, u) {
+  const mj = masterJadwal();
+  const m = mj.filter(function (r) { return r.jenis === x.jenis; })[0];
+  if (!m) gagal('Jenis jadwal tidak valid.');
+  let kode = m.kode;
+  if (!kode) {
+    const dipakai = mj.map(function (r) { return r.kode; }).filter(Boolean);
+    kode = pilih(x.kode, masterKegiatan().map(function (k) { return k.kode; }).filter(function (k) { return dipakai.indexOf(k) < 0; }), 'Kegiatan');
+  }
+  const slot = {};
+  m.isian.forEach(function (f, i) {
+    let v = teks(x[f.slot], f.slot === 'wa' ? 30 : f.slot === 'pic' ? 60 : 140, i === 0, f.label);
+    if (f.tipe === 'angka' && v && !/^\d{1,5}$/.test(v)) gagal(f.label + ' harus angka.');
+    if (f.slot === 'wa' && v && !/^[0-9+()\-.\s]{6,30}$/.test(v)) gagal(f.label + ' tidak valid.');
+    slot[f.slot] = v;
+  });
+  const store = teks(x.store, 120, true, 'Nama toko');
+  const toko = bacaToko().filter(function (s2) { return s2.nama.toLowerCase() === store.toLowerCase(); })[0];
+  return {
+    tanggal: tgl(x.tanggal), jam: jamValid(x.jam), jenis: m.jenis, kode_kegiatan: kode, store: store, region: toko ? toko.region : u.region,
+    keterangan_1: slot.k1 || '', keterangan_2: slot.k2 || '', nama_pic: slot.pic || '', nomor_pic: slot.wa || '',
+    keterangan: teks(x.ket, 300, false, 'Keterangan'), diubah: sekarang()
+  };
 }
 
 function aksiSimpanJadwal(b, u) {
@@ -918,34 +1020,81 @@ function aksiSimpanJadwal(b, u) {
     const row = t.rows.filter(function (r) { return r.id === idValid(x.id); })[0];
     if (!row || (row.kode_akun !== u.kode_akun && !admin(u))) gagal('Jadwal tidak ditemukan.');
     if (x.hapus === true) { hapus(t, [row]); return { id: row.id, hapus: true }; }
-    ubah(t, row, { status: pilih(x.status, STATUS_JADWAL, 'Status') });
-    return { id: row.id };
+    const obj = x.jenis ? cekIsiJadwal(x, u) : { diubah: sekarang() };
+    if (x.status) obj.status = pilih(x.status, STATUS_JADWAL, 'Status');
+    ubah(t, row, obj);
+    return jadwalKeluar(Object.assign({}, row, obj), u);
   }
-  const kode = masterKegiatan().map(function (m) { return m.kode; });
-  const store = teks(x.store, 80, true, 'Store');
-  const toko = bacaToko().filter(function (s) { return s.nama === store; })[0];
-  const obj = {
-    id: 'J' + acak().slice(0, 16), kode_akun: u.kode_akun, nama: u.nama, region: toko ? toko.region : u.region,
-    tanggal: tgl(x.tanggal), jam: jamValid(x.jam), kode_jenis: pilih(x.jenis, kode, 'Jenis kegiatan'), store: store,
-    keterangan: teks(x.keterangan, 150, false, 'Keterangan'), status: 'Belum dikonfirmasi', dibuat: sekarang()
-  };
+  const obj = Object.assign({ id: 'J' + acak().slice(0, 16), kode_akun: u.kode_akun, nama: u.nama, status: 'Terjadwal', dibuat: sekarang() }, cekIsiJadwal(x, u));
   tambah(t, [obj]);
-  return { id: obj.id };
+  return jadwalKeluar(obj, u);
+}
+
+function imporJadwalin() {
+  const s = ss();
+  const sh = s.getSheetByName('ImporJadwalin');
+  if (!sh) throw new Error('Sheet ImporJadwalin belum ada.');
+  const v = sh.getDataRange().getValues();
+  const head = (v.shift() || []).map(function (h) { return String(h).trim().toLowerCase(); });
+  const ix = function (daftar) { for (let i = 0; i < daftar.length; i++) { const k = head.indexOf(daftar[i]); if (k >= 0) return k; } return -1; };
+  const I = {
+    tanggal: ix(['tanggal']), nama: ix(['nama']), toko: ix(['nama toko', 'toko']), kegiatan: ix(['kegiatan']), id: ix(['id']),
+    k1: ix(['keterangan 1']), k2: ix(['keterangan 2']), status: ix(['status']), dibuat: ix(['dibuat']), diubah: ix(['diubah']),
+    pic: ix(['nama pic', 'pic']), wa: ix(['nomor pic', 'no pic']), ket: ix(['keterangan'])
+  };
+  const ambil = function (r, i) { return i >= 0 ? sel(r[i]).replace(/\s*\n\s*/g, ', ') : ''; };
+  const t = baca('Jadwal');
+  const ada = {};
+  t.rows.forEach(function (r) { ada[r.id] = true; });
+  const users = baca('Users').rows;
+  const toko = bacaToko();
+  const kodeDari = { FLD: 'FLD', 'Cooking Class': 'CC', GCOM: 'GCOM', 'Support Event': 'EVENT', Catering: 'EVENT' };
+  const baru = [];
+  let lewat = 0;
+  v.forEach(function (r) {
+    const tanggal = ambil(r, I.tanggal).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) { lewat++; return; }
+    let id = ambil(r, I.id).replace(/[^A-Za-z0-9_-]/g, '');
+    if (id.length < 4) id = 'J' + acak().slice(0, 16);
+    if (ada[id]) { lewat++; return; }
+    ada[id] = true;
+    const keg = ambil(r, I.kegiatan);
+    const k1 = ambil(r, I.k1), ket = ambil(r, I.ket);
+    let jenis = keg, kode = kodeDari[keg] || '';
+    if (!kodeDari[keg]) {
+      const isi = (k1 + ' ' + ket).toLowerCase();
+      if (/cooking/.test(isi)) { jenis = 'Cooking Class'; kode = 'CC'; }
+      else if (/pesan|box|catering/.test(isi)) { jenis = 'Catering'; kode = 'EVENT'; }
+      else { jenis = 'Lainnya'; kode = keg === 'CX' ? 'CX' : 'ADM'; }
+    }
+    const nama = ambil(r, I.nama);
+    const u = nama ? users.filter(function (x) { return samaNama(x.nama, nama); })[0] : null;
+    const store = ambil(r, I.toko);
+    const tk = toko.filter(function (x) { return x.nama.toLowerCase() === store.toLowerCase(); })[0];
+    const st = ambil(r, I.status).toLowerCase();
+    baru.push({
+      id: id, kode_akun: u ? u.kode_akun : '', nama: nama, region: tk ? tk.region : '', tanggal: tanggal, jam: '08:00', jenis: jenis, kode_kegiatan: kode,
+      store: store, keterangan_1: k1, keterangan_2: ambil(r, I.k2), nama_pic: ambil(r, I.pic), nomor_pic: ambil(r, I.wa), keterangan: ket,
+      status: st === 'selesai' ? 'Selesai' : st === 'batal' ? 'Batal' : 'Terjadwal', dibuat: ambil(r, I.dibuat) || sekarang(), diubah: ambil(r, I.diubah)
+    });
+  });
+  tambah(t, baru);
+  Logger.log('Jadwal masuk: ' + baru.length + ', dilewati: ' + lewat);
+  return { masuk: baru.length, dilewati: lewat };
 }
 
 function komplainUntuk(u) {
   const id = prop('REKAPIN_SPREADSHEET_ID');
   if (!id) gagal('Sumber komplain belum diatur.');
   const kunci = 'k:' + (admin(u) ? '*' : String(u.region).toLowerCase());
-  const c = CacheService.getScriptCache();
-  const memo = c.get(kunci);
+  const memo = cacheAmbil(kunci);
   if (memo) return JSON.parse(memo);
   const sh = SpreadsheetApp.openById(id).getSheetByName('Komplain');
   if (!sh) gagal('Sheet Komplain tidak ditemukan.');
   const v = sh.getDataRange().getValues();
   const head = (v.shift() || []).map(function (h) { return String(h).trim().toLowerCase(); });
   const ix = function (n) { return head.indexOf(n); };
-  const I = { tanggal: ix('tanggal'), store: ix('store'), regional: ix('regional'), media: ix('media'), kategori: ix('kategori'), detail: ix('detail komplain'), prioritas: ix('prioritas'), status: ix('status follow up'), pic: ix('pic follow up') };
+  const I = { tanggal: ix('tanggal'), store: ix('store'), regional: ix('regional'), area: ix('area'), media: ix('media'), kategori: ix('kategori'), detail: ix('detail komplain'), prioritas: ix('prioritas'), status: ix('status follow up'), pic: ix('pic follow up') };
   if (I.tanggal < 0 || I.store < 0 || I.regional < 0 || I.detail < 0) gagal('Format sheet Komplain tidak dikenali.');
   const reg = String(u.region).toLowerCase();
   const ambil = function (r, i) { return i >= 0 ? sel(r[i]) : ''; };
@@ -953,18 +1102,24 @@ function komplainUntuk(u) {
     const m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/.exec(s);
     return m ? m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2) : s.slice(0, 10);
   };
+  const hari = hariIni();
+  const batas = geserHari(hari.slice(0, 8) + '01', -155).slice(0, 8) + '01';
   const out = v.filter(function (r) { return admin(u) || ambil(r, I.regional).toLowerCase() === reg; }).map(function (r) {
     return {
-      tanggal: tglNorm(ambil(r, I.tanggal)), store: ambil(r, I.store), media: ambil(r, I.media), kategori: ambil(r, I.kategori),
-      detail: ambil(r, I.detail).slice(0, 300), prioritas: ambil(r, I.prioritas), status: ambil(r, I.status), pic: ambil(r, I.pic)
+      tanggal: tglNorm(ambil(r, I.tanggal)), store: ambil(r, I.store), area: ambil(r, I.area), regional: ambil(r, I.regional), media: ambil(r, I.media),
+      kategori: ambil(r, I.kategori), detail: ambil(r, I.detail).slice(0, 300), prioritas: ambil(r, I.prioritas), status: ambil(r, I.status), pic: ambil(r, I.pic)
     };
-  }).filter(function (k) { return k.detail; }).sort(function (a, b2) { return b2.tanggal.localeCompare(a.tanggal); }).slice(0, 50);
-  c.put(kunci, JSON.stringify(out), 300);
+  }).filter(function (k) { return k.detail && k.tanggal >= batas; }).sort(function (a, b2) { return b2.tanggal.localeCompare(a.tanggal); }).slice(0, 6000);
+  cacheSimpan(kunci, JSON.stringify(out), 300);
   return out;
 }
 
 function aksiKomplain(b, u) {
   return komplainUntuk(u);
+}
+
+function aksiAwal(b, u) {
+  return { master: aksiMaster(b, u), beranda: aksiBeranda(b, u) };
 }
 
 function aksiSimpanSop(b, u) {
@@ -981,7 +1136,7 @@ function aksiSimpanSop(b, u) {
   if (!isFinite(poin) || poin < 0 || poin > 100) gagal('Poin tidak valid.');
   const obj = {
     id: 'S' + acak().slice(0, 16), kode_akun: u.kode_akun, tanggal: tgl(x.tanggal), jam: jamValid(x.jam),
-    jenis: pilih(x.jenis, JENIS_SOP, 'Jenis penilaian'), store: teks(x.store, 80, true, 'Store'), petugas: teks(x.petugas, 60, true, 'Nama petugas'),
+    jenis: pilih(x.jenis, JENIS_SOP, 'Jenis penilaian'), store: teks(x.store, 80, true, 'Store'), petugas: teks(x.petugas, 60, x.jenis !== 'kebersihan', 'Nama petugas'),
     area: daftarTeks(x.area, 10, 40, 'Area').join(', '), hasil: hasil, poin: Math.round(poin * 100) / 100,
     kategori: pilih(x.kategori, KATEGORI_SOP, 'Kategori'), waktu_simpan: sekarang()
   };

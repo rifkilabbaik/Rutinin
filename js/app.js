@@ -1,4 +1,4 @@
-import { $, kosong, memuat } from './util.js';
+import { $, h, kosong, memuat } from './util.js';
 import { S, sesi, muatMaster, masterLokal, profilLengkap } from './api.js';
 
 const HAL = {
@@ -52,7 +52,7 @@ async function tampil() {
     if (!S.master && !masterLokal()) {
       try { await muatMaster(); }
       catch (e) { if (n === nomor) view.replaceChildren(kosong(e.message, 'Coba Lagi', tampil)); return; }
-    } else if (!segar) {
+    } else if (!segar && !S.segar && nama !== 'beranda') {
       segar = true;
       muatMaster().catch(() => {});
     }
@@ -76,6 +76,26 @@ $('#btnBack').addEventListener('click', () => {
 window.addEventListener('hashchange', tampil);
 tampil();
 
+let mintaMuatUlang = false;
+
+function tawarkanUpdate(w) {
+  if (document.querySelector('.update-bar')) return;
+  const tombol = h('button', { type: 'button', class: 'btn btn-primary btn-sm' }, 'Perbarui');
+  tombol.addEventListener('click', () => { tombol.disabled = true; mintaMuatUlang = true; w.postMessage('lewati'); });
+  document.body.append(h('div', { class: 'update-bar', role: 'status' }, h('span', null, 'Versi baru tersedia'), tombol));
+}
+
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').catch(() => {}); });
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (mintaMuatUlang) { mintaMuatUlang = false; location.reload(); } });
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('service-worker.js');
+      const pantau = w => w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) tawarkanUpdate(w); });
+      if (reg.waiting && navigator.serviceWorker.controller) tawarkanUpdate(reg.waiting);
+      if (reg.installing) pantau(reg.installing);
+      reg.addEventListener('updatefound', () => pantau(reg.installing));
+      setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+    } catch {}
+  });
 }
