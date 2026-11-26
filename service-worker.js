@@ -1,13 +1,11 @@
-const CACHE_NAME = 'rutinin-v1';
+const CACHE_NAME = 'rutinin-v2';
 const APP_SHELL = [
-  './',
-  './index.html',
-  './manifest.json',
-  './css/style.css',
-  './js/app.js',
-  './icons/logo.svg',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './', './index.html', './manifest.json', './css/style.css',
+  './js/app.js', './js/util.js', './js/config.js', './js/db.js', './js/api.js', './js/auth.js', './js/home.js',
+  './js/jadwal.js', './js/komplain.js', './js/profil.js', './js/hari.js', './js/form.js', './js/agenda.js',
+  './js/laporan.js', './js/openitem.js', './js/pdf.js', './js/docs.js', './js/send.js', './js/camera.js',
+  './js/absen.js', './js/sop.js', './vendor/html2canvas.min.js', './vendor/jspdf.umd.min.js',
+  './icons/logo.svg', './icons/icon-192.png', './icons/icon-512.png'
 ];
 
 self.addEventListener('install', e => {

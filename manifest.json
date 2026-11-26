@@ -1,7 +1,7 @@
 {
   "name": "Rutinin",
   "short_name": "Rutinin",
-  "description": "Kamera, absen, agenda, report, jadwal, dan SOP store dalam satu aplikasi.",
+  "description": "Kamera, absen, agenda, laporan, jadwal, komplain, dan Takbiran dalam satu aplikasi.",
   "lang": "id",
   "start_url": "./",
   "scope": "./",

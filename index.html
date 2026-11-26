@@ -3,20 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <meta name="description" content="Kamera, absen, agenda, report, jadwal, dan SOP store dalam satu aplikasi.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://nominatim.openstreetmap.org; frame-src https:; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="description" content="Kamera, absen, agenda, laporan, jadwal, komplain, dan Takbiran dalam satu aplikasi.">
   <meta name="theme-color" content="#FBF3EE">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Rutinin">
-  <meta property="og:description" content="Kamera, absen, agenda, report, jadwal, dan SOP store dalam satu aplikasi.">
-  <meta property="og:image" content="icons/icon-512.png">
+  <meta property="og:description" content="Kamera, absen, agenda, laporan, jadwal, komplain, dan Takbiran dalam satu aplikasi.">
+  <meta property="og:url" content="https://rifkilabbaik.github.io/Rutinin/">
+  <meta property="og:image" content="https://rifkilabbaik.github.io/Rutinin/icons/icon-512.png">
   <title>Rutinin</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icons/logo.svg">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;700;800;900&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -29,153 +30,51 @@
       <symbol id="i-report" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6"/></symbol>
       <symbol id="i-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></g></symbol>
       <symbol id="i-sop" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="2.5" width="6" height="3.5" rx="1.2"/><path d="M9 13.5l2 2 4-4"/></g></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></g></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></g></symbol>
       <symbol id="i-back" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M15 6l-6 6 6 6"/></symbol>
       <symbol id="i-next" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></symbol>
       <symbol id="i-ext" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
       <symbol id="i-img" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></g></symbol>
       <symbol id="i-flip" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5 9-10"/></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v5h8M7 21v-7h10v7"/></g></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></g></symbol>
+      <symbol id="i-out" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-2.6-6.4L21 8M21 3v5h-5"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></g></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></symbol>
     </defs>
   </svg>
 
   <header class="topbar">
     <div class="topbar-inner">
-      <button class="icon-btn" id="btnBack" aria-label="Kembali" hidden><svg class="ic"><use href="#i-back"/></svg></button>
+      <button class="icon-btn" id="btnBack" type="button" aria-label="Kembali" hidden><svg class="ic"><use href="#i-back"/></svg></button>
       <img class="topbar-logo" id="topLogo" src="icons/logo.svg" alt="" width="38" height="38">
       <h1 class="topbar-title" id="brandTitle">Rutin<span class="brand-in">in</span></h1>
       <h1 class="topbar-title" id="pageTitle" hidden></h1>
-      <span class="avatar" aria-label="Agung">A</span>
+      <a class="icon-btn" id="btnSetting" href="#pengaturan" aria-label="Pengaturan"><svg class="ic"><use href="#i-gear"/></svg></a>
     </div>
   </header>
 
-  <main class="main">
-    <section class="page" data-page="home" data-title="Beranda">
-      <div class="greet">
-        <h2>Halo, Agung</h2>
-        <div class="muted" id="today"></div>
-      </div>
-      <div class="hero">
-        <div class="hero-label">Jadwal berikutnya</div>
-        <div class="hero-value">Shift Pagi</div>
-        <div class="hero-sub">Besok, 07.00 - 15.00</div>
-        <div class="hero-grid">
-          <div class="mini"><div class="mini-label">Agenda hari ini</div><div class="mini-value">3 tugas</div></div>
-          <div class="mini"><div class="mini-label">Skor SOP terakhir</div><div class="mini-value">92%</div></div>
-        </div>
-      </div>
-      <div class="section">
-        <h3 class="h">Menu</h3>
-        <div class="tool-grid">
-          <a class="tool" href="#kamera"><span class="tool-ic tone-soft"><svg class="ic"><use href="#i-cam"/></svg></span>Kamera</a>
-          <a class="tool" href="#absen"><span class="tool-ic tone-mint"><svg class="ic"><use href="#i-absen"/></svg></span>Absen</a>
-          <a class="tool" href="#agenda"><span class="tool-ic tone-sky"><svg class="ic"><use href="#i-agenda"/></svg></span>Agenda</a>
-          <a class="tool" href="#report"><span class="tool-ic tone-butter"><svg class="ic"><use href="#i-report"/></svg></span>Report</a>
-          <a class="tool" href="#jadwal"><span class="tool-ic tone-pink"><svg class="ic"><use href="#i-cal"/></svg></span>Jadwal</a>
-          <a class="tool" href="#sop"><span class="tool-ic tone-lilac"><svg class="ic"><use href="#i-sop"/></svg></span>SOP</a>
-        </div>
-      </div>
-      <div class="section">
-        <h3 class="h">Terakhir</h3>
-        <a class="row" href="#report"><span class="badge tone-butter">25<small>Nov</small></span><span class="row-text"><span class="row-title">Report harian</span><span class="row-sub">Terkirim 21.04</span></span><svg class="ic chev"><use href="#i-next"/></svg></a>
-        <a class="row" href="#sop"><span class="badge tone-lilac">25<small>Nov</small></span><span class="row-text"><span class="row-title">SOP Kebersihan</span><span class="row-sub">Skor 92%</span></span><svg class="ic chev"><use href="#i-next"/></svg></a>
-      </div>
-    </section>
-
-    <section class="page" data-page="kamera" data-title="Kamera">
-      <div class="viewfinder">
-        <svg class="ic"><use href="#i-cam"/></svg>
-        <div class="stamp">
-          <div class="stamp-time" id="stampTime"></div>
-          <div id="stampDate"></div>
-          <div>Agung</div>
-        </div>
-      </div>
-      <div class="cam-bar">
-        <button class="icon-btn" data-soon aria-label="Galeri"><svg class="ic"><use href="#i-img"/></svg></button>
-        <button class="shutter" data-soon aria-label="Ambil foto"></button>
-        <button class="icon-btn" data-soon aria-label="Ganti kamera"><svg class="ic"><use href="#i-flip"/></svg></button>
-      </div>
-    </section>
-
-    <section class="page" data-page="absen" data-title="Absen">
-      <div class="card center">
-        <span class="big-ic tone-mint"><svg class="ic"><use href="#i-absen"/></svg></span>
-        <h3 class="h">Web Absen</h3>
-        <span class="pill pill-warn">Belum absen hari ini</span>
-        <button class="btn btn-primary btn-block" data-soon><svg class="ic"><use href="#i-ext"/></svg>Buka Web Absen</button>
-      </div>
-    </section>
-
-    <section class="page" data-page="agenda" data-title="Agenda">
-      <div class="seg"><button class="seg-btn on" aria-pressed="true">Hari ini</button><button class="seg-btn" aria-pressed="false">Minggu ini</button></div>
-      <div class="section">
-        <div class="row"><span class="badge tone-sky">07.30</span><span class="row-text"><span class="row-title">Briefing pagi</span><span class="row-sub">Tim store</span></span><span class="pill pill-up">Selesai</span></div>
-        <div class="row"><span class="badge tone-sky">10.00</span><span class="row-text"><span class="row-title">Cek stok gudang</span><span class="row-sub">Gudang</span></span><span class="pill pill-warn">Proses</span></div>
-        <div class="row"><span class="badge tone-sky">14.00</span><span class="row-text"><span class="row-title">Rapat area</span><span class="row-sub">Kantor area</span></span><span class="pill">Belum</span></div>
-      </div>
-      <button class="btn btn-primary btn-block" data-soon><svg class="ic"><use href="#i-plus"/></svg>Buat Agenda</button>
-    </section>
-
-    <section class="page" data-page="report" data-title="Report">
-      <div class="section">
-        <div class="row"><span class="badge tone-butter">26<small>Nov</small></span><span class="row-text"><span class="row-title">Report harian</span><span class="row-sub">Shift Pagi</span></span><span class="pill pill-warn">Draft</span></div>
-        <div class="row"><span class="badge tone-butter">25<small>Nov</small></span><span class="row-text"><span class="row-title">Report harian</span><span class="row-sub">Shift Pagi</span></span><span class="pill pill-up">Terkirim</span></div>
-        <div class="row"><span class="badge tone-butter">24<small>Nov</small></span><span class="row-text"><span class="row-title">Report harian</span><span class="row-sub">Shift Siang</span></span><span class="pill pill-up">Terkirim</span></div>
-      </div>
-      <button class="btn btn-primary btn-block" data-soon><svg class="ic"><use href="#i-plus"/></svg>Buat Report</button>
-    </section>
-
-    <section class="page" data-page="jadwal" data-title="Jadwal">
-      <div class="seg"><button class="seg-btn on" data-tab="jdNext" aria-pressed="true">Akan Datang</button><button class="seg-btn" data-tab="jdInput" aria-pressed="false">Input</button></div>
-      <div class="section" id="jdNext">
-        <div class="row"><span class="badge tone-pink">27<small>Nov</small></span><span class="row-text"><span class="row-title">Shift Pagi</span><span class="row-sub">07.00 - 15.00</span></span></div>
-        <div class="row"><span class="badge tone-pink">28<small>Nov</small></span><span class="row-text"><span class="row-title">Shift Siang</span><span class="row-sub">13.00 - 21.00</span></span></div>
-        <div class="row"><span class="badge tone-pink">29<small>Nov</small></span><span class="row-text"><span class="row-title">Libur</span><span class="row-sub">Sabtu</span></span></div>
-        <div class="row"><span class="badge tone-pink">30<small>Nov</small></span><span class="row-text"><span class="row-title">Shift Pagi</span><span class="row-sub">07.00 - 15.00</span></span></div>
-      </div>
-      <div class="card" id="jdInput" hidden>
-        <label class="field"><span>Tanggal</span><input type="date"></label>
-        <label class="field"><span>Shift</span><select><option>Pagi</option><option>Siang</option><option>Malam</option><option>Libur</option></select></label>
-        <label class="field"><span>Catatan</span><input type="text" maxlength="100"></label>
-        <button class="btn btn-primary btn-block" data-soon>Simpan</button>
-      </div>
-    </section>
-
-    <section class="page" data-page="sop" data-title="SOP" id="pageSop">
-      <div class="seg"><button class="seg-btn on" data-tab="sopLayan" aria-pressed="true">Pelayanan</button><button class="seg-btn" data-tab="sopBersih" aria-pressed="false">Kebersihan</button></div>
-      <div class="card score">
-        <div class="score-head"><span class="mini-label">Skor</span><span class="score-value" id="sopScore">0%</span></div>
-        <div class="progress"><span id="sopBar"></span></div>
-      </div>
-      <div class="section tab-panel" id="sopLayan">
-        <button class="check-row on" aria-pressed="true"><span class="check-box"><svg class="ic"><use href="#i-check"/></svg></span>Menyapa pelanggan</button>
-        <button class="check-row on" aria-pressed="true"><span class="check-box"><svg class="ic"><use href="#i-check"/></svg></span>Menawarkan menu</button>
-        <button class="check-row on" aria-pressed="true"><span class="check-box"><svg class="ic"><use href="#i-check"/></svg></span>Mengulang pesanan</button>
-        <button class="check-row" aria-pressed="false"><span class="check-box"><svg class="ic"><use href="#i-check"/></svg></span>Menyerahkan struk</button>
-        <button class="check-row" aria-pressed="false"><span class="check-box"><svg class="ic"><use href="#i-check"/></svg></span>Mengucapkan terima kasih</button>
-      </div>
-      <div class="section tab-panel" id="sopBersih" hidden>
-        <button class="check-row" aria-pressed="false"><span class="check-box"><svg class="ic"><use href="#i-check"/></svg></span>Lantai bersih</button>
-        <button class="check-row" aria-pressed="false"><span class="check-box"><svg class="ic"><use href="#i-check"/></svg></span>Meja bersih</button>
-        <button class="check-row" aria-pressed="false"><span class="check-box"><svg class="ic"><use href="#i-check"/></svg></span>Toilet bersih</button>
-        <button class="check-row" aria-pressed="false"><span class="check-box"><svg class="ic"><use href="#i-check"/></svg></span>Tempat sampah tertutup</button>
-        <button class="check-row" aria-pressed="false"><span class="check-box"><svg class="ic"><use href="#i-check"/></svg></span>Area kasir rapi</button>
-      </div>
-      <button class="btn btn-primary btn-block" data-soon>Simpan Hasil</button>
-    </section>
-  </main>
+  <main class="main" id="view"></main>
 
   <nav class="bottom-nav" aria-label="Menu utama">
-    <a class="nav-item" href="#home" data-nav="home"><span class="nav-ic"><svg class="ic"><use href="#i-home"/></svg></span>Beranda</a>
+    <a class="nav-item" href="#beranda" data-nav="beranda"><span class="nav-ic"><svg class="ic"><use href="#i-home"/></svg></span>Beranda</a>
     <a class="nav-item" href="#jadwal" data-nav="jadwal"><span class="nav-ic"><svg class="ic"><use href="#i-cal"/></svg></span>Jadwal</a>
-    <a class="fab" href="#kamera" data-nav="kamera" aria-label="Kamera"><svg class="ic"><use href="#i-cam"/></svg></a>
-    <a class="nav-item" href="#agenda" data-nav="agenda"><span class="nav-ic"><svg class="ic"><use href="#i-agenda"/></svg></span>Agenda</a>
-    <a class="nav-item" href="#report" data-nav="report"><span class="nav-ic"><svg class="ic"><use href="#i-report"/></svg></span>Report</a>
+    <a class="fab" href="#kamera" aria-label="Kamera"><svg class="ic"><use href="#i-cam"/></svg></a>
+    <a class="nav-item" href="#komplain" data-nav="komplain"><span class="nav-ic"><svg class="ic"><use href="#i-chat"/></svg></span>Komplain</a>
+    <a class="nav-item" href="#profil" data-nav="profil"><span class="nav-ic"><svg class="ic"><use href="#i-user"/></svg></span>Profil</a>
   </nav>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="js/app.js"></script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
