@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Rutinin">
+  <rect x="8" y="44" width="48" height="15" rx="7.5" fill="#FCD02A"/>
+  <rect x="8" y="63" width="66" height="15" rx="7.5" fill="#33AAF0"/>
+  <rect x="8" y="82" width="84" height="15" rx="7.5" fill="#90E81B"/>
+  <circle cx="70" cy="28" r="24" fill="#FF7A1A"/>
+  <path d="M59 28.5l7.5 7.5 14-15" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

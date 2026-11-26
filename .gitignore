@@ -1,0 +1,11 @@
+.env
+.env.*
+*.key
+*.pem
+*.p12
+credentials*.json
+.clasprc.json
+node_modules/
+dist/
+build/
+.DS_Store
